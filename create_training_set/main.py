@@ -1,3 +1,4 @@
+### Imports
 import argparse
 import glob
 
@@ -6,15 +7,16 @@ import plot_data
 import process_data
 from file_handler import FileHandler
 
+### Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("in_dir", help="Directory to take raw data from")
 parser.add_argument("out_dir", help="Directory to output np files to")
 parser.add_argument("tce_data_dir", help="Directory to find tce csv data from")
 args = parser.parse_args()
 
+### Find files to parse
 pattern = args.in_dir+"*-0120-s/*_dvt.fits"
 fh = FileHandler(args.out_dir, args.in_dir, args.tce_data_dir)
-# write_data.initialise_collated_parameters_file(args.out_dir)
 
 files = glob.glob(pattern)
 for file_path in files:
@@ -44,6 +46,6 @@ for file_path in files:
     event_parameters = process_data.collateParameters(tce_id, tce_data, tic_data, headers, period, duration)
     # Write all information to appropriate files
     fh.appendParameters(event_parameters)
-    fh.writeProcessedCurves(tce_id, lc, centroid, phase_folded_time)
+    fh.writeProcessedCurves(tce_id, binned_lc, binned_cent)
 
 print("Finished")

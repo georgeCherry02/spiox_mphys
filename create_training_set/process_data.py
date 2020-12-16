@@ -46,6 +46,7 @@ def addToSeriesBins(bins, index, value):
     bins[index].append(value)
     return bins
 
+# Something may be wrong with this...
 def determineContainingBins(center, center_spacing, bin_width, begin, end, time):
     result = [center]
     found_top = False
@@ -72,10 +73,13 @@ def binSeries(period, duration, series, time):
     # Set up local output
     local_series_bins = []
     local_delta = local_bin_width * duration
-    local_lambda = 2 * local_observation_width * duration / n_local_bins
+    local_lambda = 2 * local_observation_width * duration / (n_local_bins - 1)
     begin_time = period/2 - local_observation_width * duration
     end_time = period/2 + local_observation_width * duration
     # Begin looping through all data
+    min_index = 202
+    max_index = -1
+    min_center = 3000
     for i in range(0, len(time)):
         c_time = time[i]
         # Determine which global bin this entry falls into
@@ -85,12 +89,17 @@ def binSeries(period, duration, series, time):
         # First check if the entry falls within the examined period 
         if (c_time < begin_time or c_time > end_time):
             continue
+        # Shift the current time to 0 to account for different window
+        c_time -= begin_time
         # Determine the nearest bin (Assumes it will be able to fall into the one below hence floor)
         nearest_center_ind = math.floor(c_time/local_lambda)
+        min_center = min_center if min_center < nearest_center_ind else nearest_center_ind
         # Find the surrounding bins that it's also contained by
         bin_indices = determineContainingBins(nearest_center_ind, local_lambda, local_delta, begin_time, end_time, c_time)
         # Add value to all found bins
         for j in range(0, len(bin_indices)):
+            min_index = bin_indices[j] if bin_indices[j] < min_index else min_index
+            max_index = bin_indices[j] if bin_indices[j] > max_index else max_index
             local_series_bins = addToSeriesBins(local_series_bins, bin_indices[j], series[i])
     # Now take the median of all bins
     global_series_binned = []

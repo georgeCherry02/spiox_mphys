@@ -12,9 +12,9 @@ class FileHandler:
         self.input_dir = input_dir
         self.tce_data_dir = tce_data_dir
         # Make directory for light curves to be written into
-        self.lc_output_dir = output_dir + "processed_lcs_and_centroids/"
-        if (not os.path.exists(self.lc_output_dir)):
-            os.mkdir(self.lc_output_dir)
+        self.output_dir = output_dir + "processed_lcs_and_centroids/"
+        if (not os.path.exists(self.output_dir)):
+            os.mkdir(self.output_dir)
         # Initialise csv for collated scientific domain information
         self.collated_parameter_file = output_dir + "collated_scientific_domain_parameters.csv"
         output = self.collateKeysToCSVHeader()
@@ -36,10 +36,13 @@ class FileHandler:
         with open(self.collated_parameter_file, "a") as f:
             f.write(output)
 
-    def writeProcessedCurves(self, tce_id, lc, centroid, time):
-        data = np.array([lc, centroid, time])
-        output_path = self.lc_output_dir + tce_id
-        np.save(output_path, data)
+    def writeProcessedCurves(self, tce_id, binned_lc, binned_centroid):
+        local_output_path = self.output_dir + tce_id + "-local"
+        local_output_data = np.array([binned_lc["local"], binned_centroid["local"]])
+        global_output_path = self.output_dir + tce_id + "-global"
+        global_output_data = np.array([binned_lc["global"], binned_centroid["global"]])
+        np.save(local_output_path, local_output_data)
+        np.save(global_output_path, global_output_data)
 
     def parseDVFilePath(self, fp):
         sector_begin = fp.index("-")
