@@ -18,16 +18,7 @@ tic_ids = tce_data["ticid"]
 tic_ids_already_checked = []
 obs_ids_with_two_min_cadences = []
 
-### TESTING
-# Testing limiter
-test_ids = [140659980, 140940493, 141096071]
-count = 0;
-
-### TESTING
-for tic_id in test_ids:
-    ### TESTING
-    if (count >= 3):
-        break;
+for tic_id in tic_ids:
     if tic_id in tic_ids_already_checked:
         continue
     tic_ids_already_checked.append(tic_id)
@@ -39,8 +30,6 @@ for tic_id in test_ids:
         print(f"Found observations fitting description for {tic_id}")
         for obs_id in two_min_observations["obsid"]:
             obs_ids_with_two_min_cadences.append(obs_id)
-#        tic_ids_with_two_min_cadences.append(tic_id)
-    count += 1
 
 output = "obs_id\n"
 for obs_id in obs_ids_with_two_min_cadences:
