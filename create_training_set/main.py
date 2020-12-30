@@ -4,7 +4,7 @@ import glob
 import api_queries
 import plot_data
 import process_data
-from alt_file_handler import FileHandler
+from file_handler import FileHandler
 
 ### Parse arguments
 parser = argparse.ArgumentParser()
