@@ -10,6 +10,7 @@ from astroquery.mast import Observations
 parser = argparse.ArgumentParser()
 parser.add_argument("in_file", help="CSV file containing all obs ids to download dv files from")
 parser.add_argument("out_dir", help="Directory to output downloaded files to")
+parser.add_argument("n_batch", help="Number to download at once", type=int)
 args = parser.parse_args()
 
 ### Read in tic ids to request dataproducts from
@@ -21,10 +22,10 @@ obs_ids = obs_ids.astype("str")
 os.chdir(args.out_dir)
 
 ### Split into batches
-for i in range(0, math.ceil(len(obs_ids)/300)):
+for i in range(0, math.ceil(len(obs_ids)/args.n_batch)):
     print(f"Doing batch {(i+1)}")
-    upper_limit = min(len(obs_ids), (i+1) * 300)
-    batch = obs_ids.take(range(i * 300, upper_limit))
+    upper_limit = min(len(obs_ids), (i+1) * args.n_batch)
+    batch = obs_ids.take(range(i * args.n_batch, upper_limit))
     ### Fetch appropriate dataproducts
     data_products = Observations.get_product_list(batch)
     ### Download dataproducts
