@@ -50,8 +50,9 @@ class FileHandler:
 
     def loadRawData(self, tic_id, sector):
         # Define file patterns
-        main_file_pattern = "*-s*"+sector+"-*"+str(tic_id)+"-*-s/*"+str(tic_id)+"*"
-        dv_file_pattern = self.dv_input_dir+main_file_pattern+"_dvt.fits"
+        dv_dir_pattern = "*-s*"+sector+"-*"+str(tic_id)+"-*-s/"
+        main_file_pattern = "*"+str(tic_id)+"*"
+        dv_file_pattern = self.dv_input_dir+dv_dir_pattern+main_file_pattern+"_dvt.fits"
         lc_file_pattern = self.lc_input_dir+main_file_pattern+"_lc.fits"
         dv_file_paths = glob.glob(dv_file_pattern)
         lc_file_paths = glob.glob(lc_file_pattern)
