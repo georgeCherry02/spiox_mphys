@@ -10,19 +10,19 @@ def normaliseSeries(series):
     return series
 
 def normaliseAndQualityCorrectData(dv_data, centroid_data, epoch):
-    time = dv_data.field("TIME")
-    lc_detrend = dv_data.field("LC_DETREND")
+    print("Normalising data")
+    time = dv_data["TIME"]
+    lc_detrend = dv_data["LC_DETREND"]
     # Clean data from dv file
     lc_nans = np.isnan(lc_detrend)
     lc_detrend = lc_detrend[np.logical_not(lc_nans)]
     time = time[np.logical_not(lc_nans)]
     # Clean data from lc file
-    quality = centroid_data.field("QUALITY")
-    cent_x = centroid_data.field("MOM_CENTR1")
-    cent_y = centroid_data.field("MOM_CENTR2")
-    quality_index = quality == 0
-    cent_x = cent_x[quality_index]
-    cent_y = cent_y[quality_index]
+    cent_x = centroid_data["MOM_CENTR1"]
+    cent_y = centroid_data["MOM_CENTR2"]
+    cent_nans = np.isnan(cent_x)
+    cent_x = cent_x[np.logical_not(cent_nans)]
+    cent_y = cent_y[np.logical_not(cent_nans)]
     # Shift epochs
     time -= epoch
     # Extract centroid
@@ -46,7 +46,6 @@ def addToSeriesBins(bins, index, value):
     bins[index].append(value)
     return bins
 
-# Something may be wrong with this...
 def determineContainingBins(center, center_spacing, bin_width, begin, end, time):
     result = [center]
     found_top = False
@@ -124,7 +123,7 @@ def calculateExpectedDuration(planet_to_star_radius_ratio, orbital_period, stell
     expected_dur_days = expected_dur_seconds / 24 / 60 / 60
     return expected_dur_days
 
-def collateParameters(tce_id, tce_data, tic_data, headers, period, duration):
+def collateParameters(tce_id, tce_data, tic_data, headers, period, duration, pc):
     # Parameters still required
     # - max MES to exp MES (from SES and #transits)
     # Parameters to check calculation with Oscar for
@@ -133,7 +132,8 @@ def collateParameters(tce_id, tce_data, tic_data, headers, period, duration):
     # - Band magnitude - check this is correct header value
     event_parameters = {
         "tce_id": tce_id,
-        "tic_id": int(tce_data["ticid"])
+        "tic_id": int(tce_data["ticid"]),
+        "pc": pc
     }
     # Orbit fit parameters
     event_parameters["semi_major_scaled_to_stellar_radius"] = float(tce_data["ratioSemiMajorAxisToStarRadius"])
@@ -159,3 +159,6 @@ def collateParameters(tce_id, tce_data, tic_data, headers, period, duration):
     event_parameters["log_duration_over_expected_duration"] = math.log(duration / expected_duration)
 
     return event_parameters
+
+def determineCandidateStatus(tic_id, toi_data):
+    return tic_id in toi_data["TIC"]

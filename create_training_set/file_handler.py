@@ -6,11 +6,14 @@ import pandas as pd
 
 class FileHandler:
 
-    expected_keys = ["tce_id", "tic_id", "band_magnitude", "effective_temperature", "impact_parameter", "ingress_duration", "log_ratio_of_planet_to_earth_radius", "log_duration_over_expected_duration", "number_of_transits", "ratio_of_mes_to_expected_mes", "ratio_of_planet_to_star_radius", "semi_major_scaled_to_stellar_radius", "signal_to_noise_ratio", "stellar_density", "stellar_log_g", "stellar_melaticity", "stellar_radius", "total_proper_motion", "transit_depth"]
+    expected_keys = ["tce_id", "tic_id", "band_magnitude", "effective_temperature", "impact_parameter", "ingress_duration", "log_ratio_of_planet_to_earth_radius", "log_duration_over_expected_duration", "number_of_transits", "ratio_of_mes_to_expected_mes", "ratio_of_planet_to_star_radius", "semi_major_scaled_to_stellar_radius", "signal_to_noise_ratio", "stellar_density", "stellar_log_g", "stellar_melaticity", "stellar_radius", "total_proper_motion", "transit_depth", "pc"]
 
-    def __init__(self, output_dir, input_dir, tce_data_dir):
-        self.input_dir = input_dir
-        self.tce_data_dir = tce_data_dir
+    def __init__(self, dv_input_dir, lc_input_dir, output_dir, tce_data, toi_data):
+        # Store directories
+        self.dv_input_dir = dv_input_dir
+        self.lc_input_dir = lc_input_dir
+        self.tce_data = tce_data
+        self.toi_data = toi_data
         # Make directory for light curves to be written into
         self.output_dir = output_dir + "processed_lcs_and_centroids/"
         if (not os.path.exists(self.output_dir)):
@@ -36,6 +39,28 @@ class FileHandler:
         with open(self.collated_parameter_file, "a") as f:
             f.write(output)
 
+    def readInTCEData(self):
+        return self.readInDataFile(True, 6)
+    
+    def readInTOIData(self):
+        return self.readInDataFile(False, 4)
+
+    def readInDataFile(self, use_tce, offset):
+        return pd.read_csv((self.tce_data if use_tce else self.toi_data), skiprows=offset)
+
+    def loadRawData(self, tic_id, sector):
+        # Define file patterns
+        main_file_pattern = "*-s*"+sector+"-*"+str(tic_id)+"-*-s/*"+str(tic_id)+"*"
+        dv_file_pattern = self.dv_input_dir+main_file_pattern+"_dvt.fits"
+        lc_file_pattern = self.lc_input_dir+main_file_pattern+"_lc.fits"
+        dv_file_paths = glob.glob(dv_file_pattern)
+        lc_file_paths = glob.glob(lc_file_pattern)
+        if ((len(dv_file_paths) != 1) or (len(lc_file_paths) != 1)):
+            return [False, False]
+        dv_hdul = fits.open(dv_file_paths[0])
+        lc_hdul = fits.open(lc_file_paths[0])
+        return [dv_hdul, lc_hdul]
+
     def writeProcessedCurves(self, tce_id, binned_lc, binned_centroid):
         local_output_path = self.output_dir + tce_id + "-local"
         local_output_data = np.array([binned_lc["local"], binned_centroid["local"]])
@@ -43,33 +68,3 @@ class FileHandler:
         global_output_data = np.array([binned_lc["global"], binned_centroid["global"]])
         np.save(local_output_path, local_output_data)
         np.save(global_output_path, global_output_data)
-
-    def parseDVFilePath(self, fp):
-        sector_begin = fp.index("-")
-        sector_end = fp.index("-", sector_begin+1)
-        sector_begin += 1
-        sector = fp[sector_begin:sector_end]
-        tic_begin = sector_end
-        tic_end = fp.index("-", tic_begin+1)
-        tic_begin += 1
-        tic_id = fp[tic_begin:tic_end]
-        tce_id = fp[tic_begin:tic_end+3]
-        while (tce_id[0] == '0'):
-            tce_id = tce_id[1:len(tce_id)]
-        return [tic_id, tce_id, sector]       
-
-    def readInTCEData(self, tce_id, sector):
-        # Look for sector information
-        tce_data_path = glob.glob(self.tce_data_dir+"*"+sector+"*"+sector+"*.csv")
-        tce_data = pd.read_csv(tce_data_path[0], skiprows=6)
-        while (len(tce_id) < 14):
-            tce_id = "0"+tce_id
-        specific_tce_data = tce_data.loc[tce_data["tceid"] == tce_id]
-        return specific_tce_data
-
-    def readInDVFile(self, file_path):
-        return fits.open(file_path)
-
-    def readInCentroidData(self, tic_id, sector):
-        centroid_path = glob.glob(self.input_dir+"*/*-"+sector+"-"+tic_id+"-0120-s_lc.fits")[0]
-        return fits.open(centroid_path)[1].data

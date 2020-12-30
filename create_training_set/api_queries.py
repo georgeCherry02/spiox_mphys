@@ -37,6 +37,7 @@ def mastQuery(request):
     return head, content
 
 def fetchTICEntry(tic_id):
+    print("Fetching TIC entry")
     request = {
         "service": "Mast.Catalogs.Filtered.Tic",
         "format": "json",
