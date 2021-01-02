@@ -14,26 +14,55 @@ parser.add_argument("out_dir", help="Directory to output np files to")
 parser.add_argument("tce_data", help="Path to tce data csv")
 parser.add_argument("toi_data", help="Path to toi data csv")
 parser.add_argument("sector", help="Sector number")
+parser.add_argument("--skipping", help="Skip until you find an unprocessed tce", action="store_true")
 args = parser.parse_args()
 
+def progressBar(count, set_size):
+    output = "["
+    for i in range(20, set_size, 20):
+        if (i < count):
+            output += "|"
+        else:
+            output += " "
+    output += "]"
+    print(output)
+
 ### Find files to parse
-fh = FileHandler(args.dv_in_dir, args.lc_in_dir, args.out_dir, args.tce_data, args.toi_data)
+fh = FileHandler(args.dv_in_dir, args.lc_in_dir, args.out_dir, args.tce_data, args.toi_data, args.skipping)
 tce_data = fh.readInTCEData()
 toi_data = fh.readInTOIData()
 
+### Define console output values
+tce_amount = len(tce_data.index)
 count = 0
+percentage = round((count / tce_amount) * 100, 2)
+
+### Define TICs to skip
+s9_odd_tics = [140055734, 179304342, 35975843, 38603673, 386072709, 388684102, 342829812]
+s10_odd_tics = [307027599, 307440881, 377174003, 432829812, 464402195]
 
 for index, tce in tce_data.iterrows():
-    if (count >= 3):
-        break
     tic_id = tce["ticid"]
+    if ((tic_id in s9_odd_tics) or (tic_id in s10_odd_tics)):
+        count += 1
+        # Can't find any fits files in existence for 140055734??
+        # Can't figure out what on earth's wrong with 179304342
+        print("Skipping bad TIC")
+        continue
     tce_id = tce["tceid"]
+    if args.skipping and fh.decideSkip(tce_id):
+        print("Skipping")
+        count += 1
+        progressBar(count, tce_amount)
+        continue
+    print(f"Processing TCE: {tce_id}")
     # Create file pattern
     [dv_hdul, lc_hdul] = fh.loadRawData(tic_id, args.sector)
     if (not lc_hdul):
+        count += 1
         print(f'No lc or dv found, skipping tce: {tce["tceid"]}')
+        fh.appendSkippedTCE(tce_id)
         continue
-    count += 1
     raw_lc_data = lc_hdul[1].data
     dv_data = dv_hdul[int(tce["planetNumber"])].data
     dv_headers = dv_hdul[0].header
@@ -49,7 +78,8 @@ for index, tce in tce_data.iterrows():
     binned_lc = process_data.binSeries(period, duration, lc, phase_folded_time)
     binned_cent = process_data.binSeries(period, duration, centroid, phase_folded_time)
     # Plot the data
-    plot_data.output(tce_id, binned_lc, binned_cent, args.out_dir)
+    ### Commented out to avoid plotting
+    # plot_data.output(tce_id, binned_lc, binned_cent, args.out_dir)
     
     # Get event parameters
     tce_represents_pc = process_data.determineCandidateStatus(tic_id, toi_data)
@@ -58,5 +88,10 @@ for index, tce in tce_data.iterrows():
     # Write all the information to appropriate files
     fh.appendParameters(event_parameters)
     fh.writeProcessedCurves(tce_id, binned_lc, binned_cent)
+    count += 1
+    percentage = round((count / tce_amount) * 100, 2)
+    print(f"{percentage}% Complete")
+    progressBar(count, tce_amount)
 
 print("Finished")
+

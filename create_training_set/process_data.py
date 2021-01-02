@@ -10,7 +10,6 @@ def normaliseSeries(series):
     return series
 
 def normaliseAndQualityCorrectData(dv_data, centroid_data, epoch):
-    print("Normalising data")
     time = dv_data["TIME"]
     lc_detrend = dv_data["LC_DETREND"]
     # Clean data from dv file
@@ -155,8 +154,11 @@ def collateParameters(tce_id, tce_data, tic_data, headers, period, duration, pc)
     event_parameters["stellar_melaticity"] = headers["MH"]
     event_parameters["effective_temperature"] = headers["TEFF"]
     event_parameters["stellar_density"] = tic_data["rho"]
-    expected_duration = calculateExpectedDuration(event_parameters["ratio_of_planet_to_star_radius"], period, event_parameters["stellar_density"])
-    event_parameters["log_duration_over_expected_duration"] = math.log(duration / expected_duration)
+    if (event_parameters["stellar_density"]):
+        expected_duration = calculateExpectedDuration(event_parameters["ratio_of_planet_to_star_radius"], period, event_parameters["stellar_density"])
+        event_parameters["log_duration_over_expected_duration"] = math.log(duration / expected_duration)
+    else:
+        event_parameters["log_duration_over_expected_duration"] = 0
 
     return event_parameters
 
