@@ -34,8 +34,8 @@ def normaliseAndQualityCorrectData(dv_data, centroid_data, epoch):
     return [lc_detrend, rad, time]
 
 # Define constants for binning
-n_global_bins = 1001
-n_local_bins = 101
+n_global_bins = 2001
+n_local_bins = 201
 local_observation_width = 4
 local_bin_width = 0.16
 
@@ -67,7 +67,41 @@ def determineContainingBins(center, center_spacing, bin_width, begin, end, time)
         j += 1
     return result
 
-### This is producing Nans and idk why...
+def interpolateSeries(series):
+    # Correct for first value incase that's Nan
+    if (np.isnan(series[0])):
+        i = 1
+        while (np.isnan(series[i])):
+            i += 1
+            ### This would have gone wrong before hand if this occurs
+            if (i == len(series)):
+                print("Something's gone seriously wrong for this TCE!")
+                return series
+        val = series[i]
+        for j in range(0, i):
+            series[j] = val
+
+    for i in range(1, len(series)):
+        if (np.isnan(series[i])):
+            before_val = series[i-1]
+            j = i+1
+            reach_end = False
+            while (np.isnan(series[j])):
+                j += 1
+                if (j == len(series)):
+                    reach_end = True
+                    break
+            if reach_end:
+                for j in range(i, len(series)):
+                    series[j] = before_val
+                return series
+            after_val = series[j]
+            delta = (after_val - before_val) / (j - i + 1)
+            for k in range(i, j):
+                pos =  k - i + 1
+                series[k] = before_val + delta * pos
+    return series
+
 def binSeries(period, duration, series, time):
     # Set up global output
     global_series_bins = []
@@ -104,15 +138,12 @@ def binSeries(period, duration, series, time):
     local_series_binned = []
     for i in range(0, len(local_series_bins)):
         local_series_binned.append(np.median(local_series_bins[i]))
-    bool_list = np.isnan(global_series_binned)
-    count = 0
-    for i in bool_list:
-        if i:
-            count += 1
-    print(count)
+    # Interpolate Nans
+    interpolated_global_series = interpolateSeries(global_series_binned)
+    interpolated_local_series = interpolateSeries(local_series_binned)
     return {
-        "global": global_series_binned,
-        "local": local_series_binned
+        "global": interpolated_global_series,
+        "local": interpolated_local_series
     }
 
 def calculateExpectedDuration(planet_to_star_radius_ratio, orbital_period, stellar_density):

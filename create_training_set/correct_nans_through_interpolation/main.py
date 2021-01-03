@@ -1,6 +1,7 @@
 import argparse
 import glob
 
+import plot_data
 import process_data
 from file_handler import FileHandler
 
@@ -77,7 +78,7 @@ for index, tce in tce_data.iterrows():
     binned_cent = process_data.binSeries(period, duration, centroid, phase_folded_time)
     # Plot the data
     ### Commented out to avoid plotting
-    # plot_data.output(tce_id, binned_lc, binned_cent, args.out_dir)
+    plot_data.output(tce_id, binned_lc, binned_cent, args.out_dir)
     
     ################################################################################
     # Removed event parameters as this was already processed

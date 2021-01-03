@@ -67,7 +67,9 @@ class FileHandler:
 # planethunters and now extension seems to have changed?? 
 # fit -> fits
 ################################################################################
-        lc_file_pattern = self.lc_input_dir+main_file_pattern+"_lc.fit" 
+        lc_file_pattern = self.lc_input_dir+main_file_pattern+"_lc.fits" 
+################################################################################
+        dv_file_pattern = self.dv_input_dir+main_file_pattern+"_dvt.fits"
 ################################################################################
         dv_file_paths = glob.glob(dv_file_pattern)
         lc_file_paths = glob.glob(lc_file_pattern)
