@@ -7,7 +7,7 @@ from astroquery.mast import Observations
 ### Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("in_file", help="Path to csv file containing TCEs for sector")
-parser.add_argument("out_file", help="File to write tic id list output to")
+parser.add_argument("out_file", help="File to write obs id list output to")
 parser.add_argument("sector", help="Sector number observations are from")
 args = parser.parse_args()
 
