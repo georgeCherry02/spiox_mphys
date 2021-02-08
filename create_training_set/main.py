@@ -1,5 +1,6 @@
 import argparse
 import glob
+import warnings
 
 import plot_data
 import process_data
@@ -15,6 +16,9 @@ parser.add_argument("toi_data", help="Path to toi data csv")
 parser.add_argument("sector", help="Sector number")
 parser.add_argument("--skipping", help="Skip until you find an unprocessed tce", action="store_true")
 args = parser.parse_args()
+
+# Numpy doesn't like Nans much and that's fair enough
+warnings.filterwarnings("ignore")
 
 def progressBar(count, set_size):
     output = "["
