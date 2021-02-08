@@ -79,7 +79,7 @@ for index, tce in tce_data.iterrows():
     # plot_data.output(tce_id, binned_series["lc"], binned_series["cent"], args.out_dir)
     
     # Get event parameters
-    tce_represents_pc = process_data.determineCandidateStatus(tic_id, toi_data)
+    tce_represents_pc = process_data.determineCandidateStatus(tce, toi_data)
     event_parameters = process_data.collateParameters(tce_id, tce, dv_headers, period, duration, tce_represents_pc)
     # Write all the information to appropriate files
     fh.appendParameters(event_parameters)

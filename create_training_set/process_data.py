@@ -359,7 +359,7 @@ def collateParameters(tce_id, tce_data, headers, period, duration, pc):
     event_parameters = {
         "tce_id": tce_id,
         "tic_id": int(tce_data["ticid"]),
-        "pc": pc
+        "pc": (1 if pc else 0)
     }
     # Orbit fit parameters
     event_parameters["semi_major_scaled_to_stellar_radius"] = float(tce_data["ratioSemiMajorAxisToStarRadius"])
@@ -388,5 +388,44 @@ def collateParameters(tce_id, tce_data, headers, period, duration, pc):
 
     return event_parameters
 
-def determineCandidateStatus(tic_id, toi_data):
-    return tic_id in toi_data["TIC"]
+def normalRound(val):
+    return math.floor(val) if ((val - math.floor(val)) < 0.5) else math.ceil(val)
+
+# More precise values are always found in the TOI file hence the comparison function structure
+def compareValues(tce_val, toi_val, tce_id):
+    if (np.isnan(tce_val) or np.isnan(toi_val)):
+        return False
+    dp = 0
+    while (tce_val % 1 != 0):
+        dp += 1
+        tce_val = round(tce_val, 8)
+        tce_val *= 10
+    toi_val *= pow(10, dp)
+    return tce_val == normalRound(toi_val) or tce_val == round(toi_val)
+
+# Define TCE comparison function
+# This list is definitely not an exhaustive list of properties but I think it's sufficient
+key_tuplets = [["transitEpochBtjd", "Epoch Value", "e"], ["transitDepthPpm", "Transit Depth Value", "de"], ["transitDurationHours", "Transit Duration Value", "du"], ["orbitalPeriodDays", "Orbital Period Value", "o"]]
+def matchTCE(tce_data, toi_data):
+    tce_id = tce_data["tceid"]
+    factor_count = 0
+
+    for [tceKey, toiKey, mapKey] in key_tuplets:
+        tce_val = tce_data[tceKey]
+        toi_val = toi_data[toiKey]
+        similar = compareValues(tce_val, toi_val, tce_id)
+        if similar:
+            factor_count += 1
+
+    # From testing it was determined if 3 or more factors were matched it was going to be the same event
+    return factor_count >= 3
+
+# Need to check all possible TOIs and there may be multiple per TIC
+def determineCandidateStatus(tce_data, toi_data):
+    tic_id = tce_data["ticid"]
+    toi_data = toi_data[toi_data["TIC"] == tic_id]
+    for index, toi in toi_data.iterrows():
+        if matchTCE(tce_data, toi):
+            return True
+
+    return False
