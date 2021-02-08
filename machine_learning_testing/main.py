@@ -55,7 +55,11 @@ class CustomDataLoader(Dataset):
         self.info_file = os.path.join(filepath, 'collated_scientific_domain_parameters.csv')
 
         ### gather up tce ids
-        self.ids = np.sort([(x.split('\\')[-1]).split('-')[0] + "-" + (x.split('\\')[-1]).split('-')[1] for x in self.file_list_local])
+        self.ids = []
+        for path in self.file_list_local:
+            last_section_parts = (path.split('/')[-1]).split('-')
+            self.ids.append(last_section_parts[0] + "-" + last_section_parts[1])
+        self.ids = np.array(self.ids)
 
     def __len__(self):
         return self.ids.shape[0]
@@ -69,8 +73,40 @@ class CustomDataLoader(Dataset):
 
         ### get info file
         data_info = pd.read_csv(self.info_file)
-        tce_data_info = data_info.loc[data_info["tce_id"]==tce_id]
-        return(data_local[0], data_global[0], data_local[1], data_global[1]), tce_data_info["class"][0]
+        tce_data_info = data_info[data_info["tce_id"]==tce_id]
+        pc_class = tce_data_info["pc"].values[0]
+
+        # Remove classification and information columns
+        del tce_data_info["pc"]
+        del tce_data_info["tic_id"]
+        del tce_data_info["tce_id"]
+
+        # Remove API call
+        del tce_data_info["stellar_density"]
+
+        # Remove calculated values
+        del tce_data_info["ratio_of_mes_to_expected_mes"]
+        del tce_data_info["log_ratio_of_planet_to_earth_radius"]
+        del tce_data_info["log_duration_over_expected_duration"]
+
+        # Remove TCE data
+        del tce_data_info["semi_major_scaled_to_stellar_radius"]
+        del tce_data_info["number_of_transits"]
+        del tce_data_info["ingress_duration"]
+        del tce_data_info["impact_parameter"]
+        del tce_data_info["ratio_of_planet_to_star_radius"]
+
+        # Remove Header data
+        del tce_data_info["band_magnitude"]
+        del tce_data_info["stellar_radius"]
+        del tce_data_info["total_proper_motion"]
+        del tce_data_info["stellar_log_g"]
+        del tce_data_info["stellar_melaticity"]
+        del tce_data_info["effective_temperature"]
+
+        np_tce_data = tce_data_info.to_numpy()
+        np_tce_data.astype(np.float)
+        return(data_local[0], data_global[0], data_local[1], data_global[1], np_tce_data[0]), pc_class
 
 class TestModel(nn.Module):
     
@@ -155,6 +191,138 @@ class TestModel(nn.Module):
 
         return out
 
+class TestModelSmall(nn.Module):
+
+    '''
+    
+    PURPOSE: DEFINE EXTRANET-XS MODEL ARCHITECTURE
+    INPUT: GLOBAL + LOCAL LIGHT CURVES AND CENTROID CURVES, STELLAR PARAMETERS
+    OUTPUT: BINARY CLASSIFIER
+    
+    '''
+
+    def __init__(self):
+
+        ### initializing the nn.Moduel (super) class
+        ### (must do this first always)
+        super(TestModelSmall, self).__init__()
+
+        ### define global convolutional lalyer
+        self.fc_global = nn.Sequential(
+            nn.Conv1d(2, 8, 5, stride=1, padding=2),
+            nn.ReLU(),
+            nn.MaxPool1d(2, stride=2),
+            nn.Conv1d(8, 16, 5, stride=1, padding=2),
+            nn.ReLU(),
+#            nn.MaxPool1d(2, stride=2),
+#            nn.Conv1d(8, 16, 5, stride=1, padding=2),
+#            nn.ReLU(),
+        )
+
+        ### define the local convolutional layer
+        self.fc_local = nn.Sequential(
+            nn.Conv1d(2, 8, 5, stride=1, padding=2),
+            nn.ReLU(),
+        )
+                
+        ### define fully connected layer that combines both views
+        self.final_layer = nn.Sequential(
+            nn.Linear(24, 1),
+            nn.Sigmoid())
+        
+    ### define how to move forward through model
+    def forward(self, x_local, x_global, x_local_cen, x_global_cen, stellar_param):
+
+        ### concatonate light curve and centroid data
+        x_local_all = torch.cat([x_local, x_local_cen], dim=1)
+        x_global_all = torch.cat([x_global, x_global_cen], dim=1)
+        out_global = self.fc_global(x_global_all)
+        out_local = self.fc_local(x_local_all)
+        
+        ### do global pooling
+        out_global = nn.functional.max_pool1d(out_global, out_global.shape[-1])
+        out_local = nn.functional.max_pool1d(out_local, out_local.shape[-1])
+
+        ### flattening outputs from convolutional layers into vector
+        out_global = out_global.view(out_global.shape[0], -1)
+        out_local = out_local.view(out_local.shape[0], -1)
+
+        ### concatonate global and local views with stellar parameters
+        #out = torch.cat([out_global, out_local, stellar_param.squeeze(1)], dim=1)
+        out = torch.cat([out_global, out_local], dim=1)
+        out = self.final_layer(out)
+
+        return out
+
+
+class TestModelSmallNoMtm(nn.Module):
+
+    '''
+    
+    PURPOSE: DEFINE EXTRANET-XS MODEL ARCHITECTURE
+    INPUT: GLOBAL + LOCAL LIGHT CURVES AND CENTROID CURVES, STELLAR PARAMETERS
+    OUTPUT: BINARY CLASSIFIER
+    
+    '''
+
+    def __init__(self):
+
+        ### initializing the nn.Moduel (super) class
+        ### (must do this first always)
+        super(TestModelSmallNoMtm, self).__init__()
+
+        ### define global convolutional lalyer
+        self.fc_global = nn.Sequential(
+            nn.Conv1d(1, 8, 5, stride=1, padding=2),
+            nn.ReLU(),
+            nn.MaxPool1d(2, stride=2),
+            nn.Conv1d(8, 16, 5, stride=1, padding=2),
+            nn.ReLU(),
+            nn.MaxPool1d(2, stride=2),
+            nn.Conv1d(16, 32, 5, stride=1, padding=2),
+            nn.ReLU(),
+        )
+
+        ### define the local convolutional layer
+        self.fc_local = nn.Sequential(
+            nn.Conv1d(1, 8, 5, stride=1, padding=2),
+            nn.ReLU(),
+            nn.MaxPool1d(2, stride=2),
+            nn.Conv1d(8, 16, 5, stride=1, padding=2),
+            nn.ReLU(),
+        )
+                
+        ### define fully connected layer that combines both views
+        self.final_layer = nn.Sequential(
+            nn.Linear(48, 1),
+            nn.Sigmoid())
+        
+    ### define how to move forward through model
+    def forward(self, x_local, x_global, x_local_cen, x_global_cen, x_starpars):
+
+        ### concatonate light curve and centroid data
+        x_local_all = torch.cat([x_local, x_local_cen], dim=1)
+        x_global_all = torch.cat([x_global, x_global_cen], dim=1)
+        ######################################
+        # These are the lines changed
+        ######################################
+        out_global = self.fc_global(x_global)
+        out_local = self.fc_local(x_local)
+        
+        ### do global pooling
+        out_global = nn.functional.max_pool1d(out_global, out_global.shape[-1])
+        out_local = nn.functional.max_pool1d(out_local, out_local.shape[-1])
+
+        ### flattening outputs from convolutional layers into vector
+        out_global = out_global.view(out_global.shape[0], -1)
+        out_local = out_local.view(out_local.shape[0], -1)
+
+        ### concatonate global and local views with stellar parameters
+        out = torch.cat([out_global, out_local], dim=1)
+        out = self.final_layer(out)
+
+        return out
+
 ################################################################################
 # Define auxillary functions
 ################################################################################
@@ -175,11 +343,12 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
         for x_train_data, y_train in data_loader:
 
             ### get local view, global view and label for training
-            x_train_local, x_train_global, x_train_local_cen, x_train_global_cen = x_train_data
+            x_train_local, x_train_global, x_train_local_cen, x_train_global_cen, x_train_star = x_train_data
             x_train_local = Variable(x_train_local).type(torch.FloatTensor)
             x_train_global = Variable(x_train_global).type(torch.FloatTensor)
             x_train_local_cen = Variable(x_train_local_cen).type(torch.FloatTensor)
             x_train_global_cen = Variable(x_train_global_cen).type(torch.FloatTensor)
+            x_train_star = Variable(x_train_star).type(torch.FloatTensor)
             y_train = Variable(y_train).type(torch.FloatTensor)
 
             ### fix dimnensions for next steps
@@ -187,10 +356,11 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
             x_train_global = x_train_global.unsqueeze(1)
             x_train_local_cen = x_train_local_cen.unsqueeze(1)
             x_train_global_cen = x_train_global_cen.unsqueeze(1)
+            x_train_star = x_train_star.unsqueeze(1)
             y_train = y_train.unsqueeze(1)
 
             ### calculate loss using model
-            output_train = model(x_train_local, x_train_global, x_train_local_cen, x_train_global_cen)
+            output_train = model(x_train_local, x_train_global, x_train_local_cen, x_train_global_cen, x_train_star)
             loss = criterion(output_train, y_train)
             train_loss += loss.data
 
@@ -209,11 +379,12 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
         for x_val_data, y_val in val_loader:
             
             ### get local view, global view, and label for validation
-            x_val_local, x_val_global, x_val_local_cen, x_val_global_cen = x_val_data
+            x_val_local, x_val_global, x_val_local_cen, x_val_global_cen, x_val_star = x_val_data
             x_val_local = Variable(x_val_local).type(torch.FloatTensor)
             x_val_global = Variable(x_val_global).type(torch.FloatTensor)
             x_val_local_cen = Variable(x_val_local_cen).type(torch.FloatTensor)
             x_val_global_cen = Variable(x_val_global_cen).type(torch.FloatTensor)
+            x_val_star = Variable(x_val_star).type(torch.FloatTensor)
 
             ### fix dimensions for next steps
             y_val = Variable(y_val).type(torch.FloatTensor)
@@ -221,10 +392,11 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
             x_val_global = x_val_global.unsqueeze(1)
             x_val_local_cen = x_val_local_cen.unsqueeze(1)
             x_val_global_cen = x_val_global_cen.unsqueeze(1)
+            x_val_star = x_val_star.unsqueeze(1)
             y_val = y_val.unsqueeze(1)
 
             ### calculate loss & add to sum over all batches
-            output_val = model(x_val_local, x_val_global, x_val_local_cen, x_val_global_cen)
+            output_val = model(x_val_local, x_val_global, x_val_local_cen, x_val_global_cen, x_val_star)
             loss_val = criterion(output_val, y_val)
             val_loss += loss_val.data
 
@@ -260,7 +432,7 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
 print("Training Model...")
 
 ### define model
-model = TestModel()
+model = TestModelSmallNoMtm()
 
 ### learning rate
 lr = args.r_learn
@@ -286,12 +458,14 @@ val_loader = DataLoader(validation_data, batch_size=batch_size, shuffle=False)
 
 ### train model
 loss_train_epoch, loss_val_epoch, acc_val_epoch, ap_val_epoch, pred_val_final, gt_val_final = train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser)
+"""
 print(loss_train_epoch)
 print(loss_val_epoch)
 print(acc_val_epoch)
 print(ap_val_epoch)
 print(pred_val_final)
 print(gt_val_final)
+"""
 
 ################################################################################
 # ALL EXONET CODE
@@ -306,13 +480,17 @@ print("\nCALCULATING METRICS...\n")
 
 ### calculate average precision & precision-recall curves
 AP = average_precision_score(gt_val_final, pred_val_final, average=None)
+print("GT VAL FIN: ")
+print(gt_val_final)
+print("PRED VAL FIN: ")
+print(pred_val_final)
 print("   average precision = {0:0.4f}\n".format(AP))
  
 ### calculate precision-recall curve
 P, R, _ = precision_recall_curve(gt_val_final, pred_val_final)
 
 ### calculate confusion matrix based on different thresholds 
-thresh = [0.5, 0.6, 0.7, 0.8, 0.9]
+thresh = [0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.125, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.975, 0.999]
 prec_thresh, recall_thresh = np.zeros(len(thresh)), np.zeros(len(thresh))
 for n, nval in enumerate(thresh):
     pred_byte = np.zeros(len(pred_val_final))
@@ -324,11 +502,14 @@ for n, nval in enumerate(thresh):
     prec_thresh[n] = precision_score(gt_val_final, pred_byte)
     recall_thresh[n] = recall_score(gt_val_final, pred_byte)
     print("   thresh = {0:0.2f}, precision = {1:0.2f}, recall = {2:0.2f}".format(thresh[n], prec_thresh[n], recall_thresh[n]))
-    a = confusion_matrix(gt_val_final, pred_byte).ravel()
-    print("Confusion matrix:")
-    print(a)
-"""
+    tn, fp, fn, tp = confusion_matrix(gt_val_final, pred_byte).ravel()
+    print("      TN = {0:0}, FP = {1:0}, FN = {2:0}, TP = {3:0}".format(tn, fp, fn, tp))
+    # To avoid breaking???
+    # a = confusion_matrix(gt_val_final, pred_byte).ravel()
+    # print("Confusion matrix:")
+    # print(a)
 
+"""
 ########################################
 ######### OUTPUT MODEL + STATS  ########
 ########################################
