@@ -122,7 +122,7 @@ def calculateExpectedDuration(planet_to_star_radius_ratio, orbital_period, stell
     expected_dur_days = expected_dur_seconds / 24 / 60 / 60
     return expected_dur_days
 
-def collateParameters(tce_id, tce_data, tic_data, headers, period, duration, pc):
+def collateParameters(tce_id, tce_data, headers, period, duration, pc):
     # Parameters still required
     # - max MES to exp MES (from SES and #transits)
     # Parameters to check calculation with Oscar for
@@ -153,8 +153,7 @@ def collateParameters(tce_id, tce_data, tic_data, headers, period, duration, pc)
     event_parameters["stellar_log_g"] = headers["LOGG"]
     event_parameters["stellar_melaticity"] = headers["MH"]
     event_parameters["effective_temperature"] = headers["TEFF"]
-    event_parameters["stellar_density"] = tic_data["rho"]
-    if (event_parameters["stellar_density"]):
+    if (False and event_parameters["stellar_density"]):
         expected_duration = calculateExpectedDuration(event_parameters["ratio_of_planet_to_star_radius"], period, event_parameters["stellar_density"])
         event_parameters["log_duration_over_expected_duration"] = math.log(duration / expected_duration)
     else:

@@ -86,8 +86,7 @@ for index, tce in tce_data.iterrows():
     
     # Get event parameters
     tce_represents_pc = process_data.determineCandidateStatus(tic_id, toi_data)
-    tic_data = api_queries.fetchTICEntry(str(tic_id))[0]
-    event_parameters = process_data.collateParameters(tce_id, tce, tic_data, dv_headers, period, duration, tce_represents_pc)
+    event_parameters = process_data.collateParameters(tce_id, tce, dv_headers, period, duration, tce_represents_pc)
     # Write all the information to appropriate files
     fh.appendParameters(event_parameters)
     fh.writeProcessedCurves(tce_id, binned_lc, binned_cent)

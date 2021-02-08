@@ -6,7 +6,7 @@ import pandas as pd
 
 class FileHandler:
 
-    expected_keys = ["tce_id", "tic_id", "band_magnitude", "effective_temperature", "impact_parameter", "ingress_duration", "log_ratio_of_planet_to_earth_radius", "log_duration_over_expected_duration", "number_of_transits", "ratio_of_mes_to_expected_mes", "ratio_of_planet_to_star_radius", "semi_major_scaled_to_stellar_radius", "signal_to_noise_ratio", "stellar_density", "stellar_log_g", "stellar_melaticity", "stellar_radius", "total_proper_motion", "transit_depth", "pc"]
+    expected_keys = ["tce_id", "tic_id", "band_magnitude", "effective_temperature", "impact_parameter", "ingress_duration", "log_ratio_of_planet_to_earth_radius", "log_duration_over_expected_duration", "number_of_transits", "ratio_of_mes_to_expected_mes", "ratio_of_planet_to_star_radius", "semi_major_scaled_to_stellar_radius", "signal_to_noise_ratio", "stellar_log_g", "stellar_melaticity", "stellar_radius", "total_proper_motion", "transit_depth", "pc"]
 
     def __init__(self, dv_input_dir, lc_input_dir, output_dir, tce_data, toi_data, skipping):
         # Store directories
