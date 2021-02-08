@@ -46,12 +46,6 @@ odd_tics = {
 }
 for index, tce in tce_data.iterrows():
     tic_id = tce["ticid"]
-    if (tic_id in odd_tics[args.sector]):
-        count += 1
-        # Can't find any fits files in existence for 140055734??
-        # Can't figure out what on earth's wrong with 179304342
-        print("Skipping bad TIC")
-        continue
     tce_id = tce["tceid"]
     if args.skipping and fh.decideSkip(tce_id):
         print("Skipping")
