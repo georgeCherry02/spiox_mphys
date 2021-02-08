@@ -126,6 +126,15 @@ def updateBins(series_bins, view, index, lc_det_val, lc_pdc_val, cent_val):
     series_bins[view]["cent"][index].append(cent_val)
     return series_bins
 
+def padBinsToLength(series_bins):
+    # Check local length
+    if (len(series_bins["local"]["lc_det"]) < n_local_bins):
+        series_bins = updateBins(series_bins, "local", n_local_bins-1, [], [], [])
+    # Check global length
+    if (len(series_bins["global"]["lc_det"]) < n_global_bins):
+        series_bins = updateBins(series_bins, "global", n_global_bins-1, [], [], [])
+    return series_bins
+
 def binAllTimeSeries(period, duration, phase_folded_time, lc_detrend, lc_pdc, delta_r):
     # Begin to bin all the series
     # Initialise outputs
@@ -169,6 +178,8 @@ def binAllTimeSeries(period, duration, phase_folded_time, lc_detrend, lc_pdc, de
         for j in range(0, len(local_bin_indices)):
             series_bins = updateBins(series_bins, "local", local_bin_indices[j], lc_det_val, lc_pdc_val, cent_val)
 
+    # Check all bins are padded to length
+    series_bins = padBinsToLength(series_bins)
     # Now begin to take the median of all bins
     series_output = {
         "global": {
