@@ -6,7 +6,7 @@ import pandas as pd
 
 class FileHandler:
 
-    expected_keys = ["tce_id", "tic_id", "band_magnitude", "effective_temperature", "impact_parameter", "ingress_duration", "log_ratio_of_planet_to_earth_radius", "log_duration_over_expected_duration", "number_of_transits", "ratio_of_mes_to_expected_mes", "ratio_of_planet_to_star_radius", "semi_major_scaled_to_stellar_radius", "signal_to_noise_ratio", "stellar_density", "stellar_log_g", "stellar_melaticity", "stellar_radius", "total_proper_motion", "transit_depth", "pc"]
+    expected_keys = ["tce_id", "tic_id", "band_magnitude", "effective_temperature", "impact_parameter", "ingress_duration", "log_ratio_of_planet_to_earth_radius", "log_duration_over_expected_duration", "number_of_transits", "ratio_of_mes_to_expected_mes", "ratio_of_planet_to_star_radius", "semi_major_scaled_to_stellar_radius", "signal_to_noise_ratio", "stellar_log_g", "stellar_melaticity", "stellar_radius", "total_proper_motion", "transit_depth", "pc"]
 
     def __init__(self, dv_input_dir, lc_input_dir, output_dir, tce_data, toi_data, skipping):
         # Store directories
@@ -41,7 +41,7 @@ class FileHandler:
         output = f''
         for i in range(0, len(self.expected_keys)):
             output += f'{event_parameters[self.expected_keys[i]]},'
-        output = output[0:len(output)-2]+"\n"
+        output = output[0:len(output)-1]+"\n"
         with open(self.collated_parameter_file, "a") as f:
             f.write(output)
 
@@ -56,10 +56,16 @@ class FileHandler:
 
     def loadRawData(self, tic_id, sector):
         # Define file patterns
+        if (False):
+            ### File patterns for laptop
+            dv_file_pattern = self.dv_input_dir+"*/*"+str(tic_id)+"*_dvt.fits"
+            lc_file_pattern = self.lc_input_dir+"*/*"+str(tic_id)+"*_lc.fits"
+        ### File patterns for glamdring
         dv_dir_pattern = "*-s*"+sector+"-*"+str(tic_id)+"-*-s/"
         main_file_pattern = "*"+str(tic_id)+"*"
         dv_file_pattern = self.dv_input_dir+dv_dir_pattern+main_file_pattern+"_dvt.fits"
         lc_file_pattern = self.lc_input_dir+main_file_pattern+"_lc.fit"
+
         dv_file_paths = glob.glob(dv_file_pattern)
         lc_file_paths = glob.glob(lc_file_pattern)
         if ((len(dv_file_paths) != 1) or (len(lc_file_paths) != 1)):

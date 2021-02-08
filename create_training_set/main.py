@@ -46,12 +46,6 @@ odd_tics = {
 }
 for index, tce in tce_data.iterrows():
     tic_id = tce["ticid"]
-    if (tic_id in odd_tics[args.sector]):
-        count += 1
-        # Can't find any fits files in existence for 140055734??
-        # Can't figure out what on earth's wrong with 179304342
-        print("Skipping bad TIC")
-        continue
     tce_id = tce["tceid"]
     if args.skipping and fh.decideSkip(tce_id):
         print("Skipping")
@@ -74,23 +68,22 @@ for index, tce in tce_data.iterrows():
     period = float(tce["orbitalPeriodDays"])
     duration_hrs = float(tce["transitDurationHours"])
     duration = duration_hrs / 24
-    # Normalise and quality correct required data
-    [lc, centroid, time] = process_data.normaliseAndQualityCorrectData(dv_data, raw_lc_data, epoch)
-    # Bin the data
-    phase_folded_time = (time + period/2) % period
-    binned_lc = process_data.binSeries(period, duration, lc, phase_folded_time)
-    binned_cent = process_data.binSeries(period, duration, centroid, phase_folded_time)
+    detected_depth = float(tce["transitDepthPpm"])
+    # First phase fold and median bin both time series
+    [binned_series, phase_folded_time] = process_data.prepareBinnedTimeSeries(period, duration, epoch, raw_lc_data, dv_data)
+    binned_series = process_data.normaliseBinnedTimeSeries(duration, period, detected_depth, binned_series)
+    binned_series = process_data.correctBinnedNans(duration, period, binned_series)
+
     # Plot the data
-    ### Commented out to avoid plotting
-    # plot_data.output(tce_id, binned_lc, binned_cent, args.out_dir)
+    ### Comment out to avoid plotting
+    # plot_data.output(tce_id, binned_series["lc"], binned_series["cent"], args.out_dir)
     
     # Get event parameters
-    tce_represents_pc = process_data.determineCandidateStatus(tic_id, toi_data)
-    tic_data = api_queries.fetchTICEntry(str(tic_id))[0]
-    event_parameters = process_data.collateParameters(tce_id, tce, tic_data, dv_headers, period, duration, tce_represents_pc)
+    tce_represents_pc = process_data.determineCandidateStatus(tce, toi_data)
+    event_parameters = process_data.collateParameters(tce_id, tce, dv_headers, period, duration, tce_represents_pc)
     # Write all the information to appropriate files
     fh.appendParameters(event_parameters)
-    fh.writeProcessedCurves(tce_id, binned_lc, binned_cent)
+    fh.writeProcessedCurves(tce_id, binned_series["lc"], binned_series["cent"])
     count += 1
     percentage = round((count / tce_amount) * 100, 2)
     print(f"{percentage}% Complete")

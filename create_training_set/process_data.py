@@ -2,6 +2,7 @@ import math
 import numpy as np
 from scipy import constants as scientific_constants
 
+### Old normalisation function
 def normaliseSeries(series):
     med = np.median(series)
     series = series / med - 1
@@ -9,6 +10,7 @@ def normaliseSeries(series):
     series /= sd
     return series
 
+### Old data extraction
 def normaliseAndQualityCorrectData(dv_data, centroid_data, epoch):
     time = dv_data["TIME"]
     lc_detrend = dv_data["LC_DETREND"]
@@ -39,12 +41,14 @@ n_local_bins = 201
 local_observation_width = 4
 local_bin_width = 0.16
 
+### Old binning functionality
 def addToSeriesBins(bins, index, value):
     while (len(bins) <= index):
         bins.append([])
     bins[index].append(value)
     return bins
 
+# Still used
 def determineContainingBins(center, center_spacing, bin_width, begin, end, time):
     result = [center]
     found_top = False
@@ -64,6 +68,7 @@ def determineContainingBins(center, center_spacing, bin_width, begin, end, time)
         j += 1
     return result
 
+### Old binning functionality
 def binSeries(period, duration, series, time):
     # Set up global output
     global_series_bins = []
@@ -111,6 +116,228 @@ def binSeries(period, duration, series, time):
         "local": local_series_binned
     }
 
+def updateBins(series_bins, view, index, lc_det_val, lc_pdc_val, cent_val):
+    while(len(series_bins[view]["lc_det"]) <= index):
+        series_bins[view]["lc_det"].append([])
+        series_bins[view]["lc_pdc"].append([])
+        series_bins[view]["cent"].append([])
+    series_bins[view]["lc_det"][index].append(lc_det_val)
+    series_bins[view]["lc_pdc"][index].append(lc_pdc_val)
+    series_bins[view]["cent"][index].append(cent_val)
+    return series_bins
+
+def binAllTimeSeries(period, duration, phase_folded_time, lc_detrend, lc_pdc, delta_r):
+    # Begin to bin all the series
+    # Initialise outputs
+    series_bins = {
+        "global": {
+            "lc_det": [],
+            "lc_pdc": [],
+            "cent": []
+        },
+        "local": {
+            "lc_det": [],
+            "lc_pdc": [],
+            "cent": []
+        }
+    }
+    global_delta = period / n_global_bins
+    local_delta = local_bin_width * duration
+    local_lambda = 2 * local_observation_width * duration / (n_local_bins - 1)
+    begin_time = period/2 - local_observation_width * duration
+    end_time = period/2 + local_observation_width * duration
+    # Begin looping through all data
+    for i in range(0, len(phase_folded_time)):
+        c_time = phase_folded_time[i]
+        lc_det_val = lc_detrend[i]
+        lc_pdc_val = lc_pdc[i]
+        cent_val = delta_r[i]
+        # Determine which global bin this entry falls into
+        global_ind = math.floor(c_time/global_delta)
+        series_bins = updateBins(series_bins, "global", global_ind, lc_det_val, lc_pdc_val, cent_val)
+        # Determine all the local bins that the entry falls into
+        # First check if the entry falls within the examined period
+        if (c_time < begin_time or c_time > end_time):
+            continue
+        # Shift the current times epoch to the beginning time to account for different window
+        c_time -= begin_time
+        # Determine the nearest bin (Assumes it will be able to fall into the one below, hence floor)
+        nearest_center_ind = math.floor(c_time/local_lambda)
+        # Find the surrounding bins that it's also contained by
+        local_bin_indices = determineContainingBins(nearest_center_ind, local_lambda, local_delta, begin_time, end_time, c_time)
+        # Add value to all found bins
+        for j in range(0, len(local_bin_indices)):
+            series_bins = updateBins(series_bins, "local", local_bin_indices[j], lc_det_val, lc_pdc_val, cent_val)
+
+    # Now begin to take the median of all bins
+    series_output = {
+        "global": {
+            "lc_det": [],
+            "lc_pdc": [],
+            "cent": []
+        },
+        "local": {
+            "lc_det": [],
+            "lc_pdc": [],
+            "cent": []
+        }
+    }
+    global_nan_count = 0
+    for i in range(0, len(series_bins["global"]["lc_det"])):
+        lc_detrend_median = np.median(series_bins["global"]["lc_det"][i])
+        if (np.isnan(lc_detrend_median)):
+            global_nan_count += 1
+        series_output["global"]["lc_det"].append(lc_detrend_median)
+        series_output["global"]["lc_pdc"].append(np.median(series_bins["global"]["lc_pdc"][i]))
+        series_output["global"]["cent"].append(np.median(series_bins["global"]["cent"][i]))
+    local_nan_count = 0
+    for i in range(0, len(series_bins["local"]["lc_det"])):
+        lc_detrend_median = np.median(series_bins["local"]["lc_det"][i])
+        if (np.isnan(lc_detrend_median)):
+            local_nan_count += 1
+        series_output["local"]["lc_det"].append(np.median(series_bins["local"]["lc_det"][i]))
+        series_output["local"]["lc_pdc"].append(np.median(series_bins["local"]["lc_pdc"][i]))
+        series_output["local"]["cent"].append(np.median(series_bins["local"]["cent"][i]))
+    result = {
+        "cent": {
+            "global": series_output["global"]["cent"],
+            "local": series_output["local"]["cent"]
+        },
+        "lc": {}
+    }
+
+    if (local_nan_count > n_local_bins/2 or global_nan_count > n_global_bins/2):
+        result["lc"]["global"] = series_output["global"]["lc_pdc"]
+        result["lc"]["local"] = series_output["local"]["lc_pdc"]
+    else:
+        result["lc"]["global"] = series_output["global"]["lc_det"]
+        result["lc"]["local"] = series_output["local"]["lc_det"]
+
+    return result
+
+def prepareBinnedTimeSeries(period, duration, epoch, lc_data, dv_data):
+    # First extract series from DV file
+    # Time is identical for each file
+    time = dv_data["TIME"]
+    lc_detrend = dv_data["LC_DETREND"]
+    dv_nans = np.isnan(lc_detrend)
+    lc_detrend = lc_detrend[np.logical_not(dv_nans)]
+    time = time[np.logical_not(dv_nans)]
+    # Then extract series from LC file
+    lc_pdc = lc_data["PDCSAP_FLUX"]
+    cent_x = lc_data["MOM_CENTR1"]
+    cent_y = lc_data["MOM_CENTR2"]
+    lc_nans = np.isnan(lc_pdc)
+    lc_pdc = lc_pdc[np.logical_not(lc_nans)]
+    cent_x = cent_x[np.logical_not(lc_nans)]
+    cent_y = cent_y[np.logical_not(lc_nans)]
+    x_shift = cent_x - np.median(cent_x)
+    y_shift = cent_y - np.median(cent_y)
+    delta_r = []
+    for i in range(0, len(x_shift)):
+        delta_r.append(math.sqrt(x_shift[i]**2 + y_shift[i]**2))
+    # Shift epochs of data
+    time -= epoch
+    # Phase fold time
+    phase_folded_time = (time + period/2) % period
+    ################################################################################
+    # Remove anomalies of > 3.5sigma difference from surrounding points
+    # What does surrounding mean??
+    ################################################################################
+    # Median bin to local and global views
+    return [binAllTimeSeries(period, duration, phase_folded_time, lc_detrend, lc_pdc, delta_r), phase_folded_time]
+
+def determineTransitIndices(duration, period):
+    middle_global_index = n_global_bins/2
+    global_proportion = duration / period
+    min_global_index = math.ceil(middle_global_index - (global_proportion/2 * n_global_bins))
+    max_global_index = math.floor(middle_global_index + (global_proportion/2 * n_global_bins))
+    middle_local_index = n_local_bins/2
+    local_proportion = 1/8
+    min_local_index = math.ceil(middle_local_index - (local_proportion/2 * n_local_bins))
+    max_local_index = math.floor(middle_local_index + (local_proportion/2 * n_local_bins))
+    return [min_global_index, max_global_index, min_local_index, max_local_index]
+
+def normaliseBinnedTimeSeries(duration, period, detected_depth, binned_series):
+    [min_global_index, max_global_index, min_local_index, max_local_index] = determineTransitIndices(duration, period)
+    out_of_transit_lc = {
+        "local": np.concatenate((binned_series["lc"]["local"][:min_local_index], binned_series["lc"]["local"][max_local_index:])),
+        "global": np.concatenate((binned_series["lc"]["global"][:min_global_index], binned_series["lc"]["global"][max_global_index:]))
+    }
+    out_of_transit_cent = {
+        "local": np.concatenate((binned_series["cent"]["local"][:min_local_index], binned_series["cent"]["local"][max_local_index:])),
+        "global": np.concatenate((binned_series["cent"]["global"][:min_global_index], binned_series["cent"]["global"][max_global_index:]))
+    }
+    out_of_transit_lc_nans_removed = {
+        "local": out_of_transit_lc["local"][np.logical_not(np.isnan(out_of_transit_lc["local"]))],
+        "global": out_of_transit_lc["global"][np.logical_not(np.isnan(out_of_transit_lc["global"]))]
+    }
+    out_of_transit_cent_nans_removed = {
+        "local": out_of_transit_cent["local"][np.logical_not(np.isnan(out_of_transit_cent["local"]))],
+        "global": out_of_transit_cent["global"][np.logical_not(np.isnan(out_of_transit_cent["global"]))]
+    }
+    binned_series["lc"]["local"] -= np.median(out_of_transit_lc_nans_removed["local"])
+    binned_series["lc"]["global"] -= np.median(out_of_transit_lc_nans_removed["global"])
+    binned_series["cent"]["local"] -= np.median(out_of_transit_cent_nans_removed["local"])
+    binned_series["cent"]["global"] -= np.median(out_of_transit_cent_nans_removed["global"])
+    binned_series["lc"]["local"] /= detected_depth
+    binned_series["lc"]["global"] /= detected_depth
+    return binned_series
+
+def correctBinnedNans(duration, period, binned_series):
+    [min_global_index, max_global_index, min_local_index, max_local_index] = determineTransitIndices(duration, period)
+    for i in range(0, len(binned_series["lc"]["local"])):
+        if (i <= min_local_index or i >= max_local_index):
+            binned_series["lc"]["local"][i] = 0 if np.isnan(binned_series["lc"]["local"][i]) else binned_series["lc"]["local"][i]
+            binned_series["cent"]["local"][i] = 0 if np.isnan(binned_series["cent"]["local"][i]) else binned_series["cent"]["local"][i]
+    for i in range(0, len(binned_series["lc"]["global"])):
+        if (i <= min_global_index or i >= max_global_index):
+            binned_series["lc"]["global"][i] = 0 if np.isnan(binned_series["lc"]["global"][i]) else binned_series["lc"]["global"][i]
+            binned_series["cent"]["global"][i] = 0 if np.isnan(binned_series["cent"]["global"][i]) else binned_series["cent"]["global"][i]
+    return linearlyInterpolateBinNans(binned_series)
+
+def interpolateSeries(series):
+    # Correct for first value incase that's Nan
+    if (np.isnan(series[0])):
+        i = 1
+        while (np.isnan(series[i])):
+            i += 1
+            ### This would have gone wrong before hand if this occurs
+            if (i == len(series)):
+                print("Something's gone seriously wrong for this TCE!")
+                return series
+        val = series[i]
+        for j in range(0, i):
+            series[j] = val
+
+    for i in range(1, len(series)):
+        if (np.isnan(series[i])):
+            before_val = series[i-1]
+            j = i+1
+            reach_end = False
+            while (np.isnan(series[j])):
+                j += 1
+                if (j == len(series)):
+                    reach_end = True
+                    break
+            if reach_end:
+                for j in range(i, len(series)):
+                    series[j] = before_val
+                return series
+            after_val = series[j]
+            delta = (after_val - before_val) / (j - i + 1)
+            for k in range(i, j):
+                pos =  k - i + 1
+                series[k] = before_val + delta * pos
+    return series
+
+def linearlyInterpolateBinNans(binned_series):
+    binned_series["lc"]["local"] = interpolateSeries(binned_series["lc"]["local"])
+    binned_series["lc"]["global"] = interpolateSeries(binned_series["lc"]["global"])
+    binned_series["cent"]["local"] = interpolateSeries(binned_series["cent"]["local"])
+    binned_series["cent"]["global"] = interpolateSeries(binned_series["cent"]["global"])
+    return binned_series
+
 def calculateExpectedDuration(planet_to_star_radius_ratio, orbital_period, stellar_density):
     scaled_stellar_density = stellar_density * 1408
     scaled_orbital_period = orbital_period * 24 * 60 * 60
@@ -122,7 +349,7 @@ def calculateExpectedDuration(planet_to_star_radius_ratio, orbital_period, stell
     expected_dur_days = expected_dur_seconds / 24 / 60 / 60
     return expected_dur_days
 
-def collateParameters(tce_id, tce_data, tic_data, headers, period, duration, pc):
+def collateParameters(tce_id, tce_data, headers, period, duration, pc):
     # Parameters still required
     # - max MES to exp MES (from SES and #transits)
     # Parameters to check calculation with Oscar for
@@ -132,7 +359,7 @@ def collateParameters(tce_id, tce_data, tic_data, headers, period, duration, pc)
     event_parameters = {
         "tce_id": tce_id,
         "tic_id": int(tce_data["ticid"]),
-        "pc": pc
+        "pc": (1 if pc else 0)
     }
     # Orbit fit parameters
     event_parameters["semi_major_scaled_to_stellar_radius"] = float(tce_data["ratioSemiMajorAxisToStarRadius"])
@@ -153,8 +380,7 @@ def collateParameters(tce_id, tce_data, tic_data, headers, period, duration, pc)
     event_parameters["stellar_log_g"] = headers["LOGG"]
     event_parameters["stellar_melaticity"] = headers["MH"]
     event_parameters["effective_temperature"] = headers["TEFF"]
-    event_parameters["stellar_density"] = tic_data["rho"]
-    if (event_parameters["stellar_density"]):
+    if (False and event_parameters["stellar_density"]):
         expected_duration = calculateExpectedDuration(event_parameters["ratio_of_planet_to_star_radius"], period, event_parameters["stellar_density"])
         event_parameters["log_duration_over_expected_duration"] = math.log(duration / expected_duration)
     else:
@@ -162,5 +388,44 @@ def collateParameters(tce_id, tce_data, tic_data, headers, period, duration, pc)
 
     return event_parameters
 
-def determineCandidateStatus(tic_id, toi_data):
-    return tic_id in toi_data["TIC"]
+def normalRound(val):
+    return math.floor(val) if ((val - math.floor(val)) < 0.5) else math.ceil(val)
+
+# More precise values are always found in the TOI file hence the comparison function structure
+def compareValues(tce_val, toi_val, tce_id):
+    if (np.isnan(tce_val) or np.isnan(toi_val)):
+        return False
+    dp = 0
+    while (tce_val % 1 != 0):
+        dp += 1
+        tce_val = round(tce_val, 8)
+        tce_val *= 10
+    toi_val *= pow(10, dp)
+    return tce_val == normalRound(toi_val) or tce_val == round(toi_val)
+
+# Define TCE comparison function
+# This list is definitely not an exhaustive list of properties but I think it's sufficient
+key_tuplets = [["transitEpochBtjd", "Epoch Value", "e"], ["transitDepthPpm", "Transit Depth Value", "de"], ["transitDurationHours", "Transit Duration Value", "du"], ["orbitalPeriodDays", "Orbital Period Value", "o"]]
+def matchTCE(tce_data, toi_data):
+    tce_id = tce_data["tceid"]
+    factor_count = 0
+
+    for [tceKey, toiKey, mapKey] in key_tuplets:
+        tce_val = tce_data[tceKey]
+        toi_val = toi_data[toiKey]
+        similar = compareValues(tce_val, toi_val, tce_id)
+        if similar:
+            factor_count += 1
+
+    # From testing it was determined if 3 or more factors were matched it was going to be the same event
+    return factor_count >= 3
+
+# Need to check all possible TOIs and there may be multiple per TIC
+def determineCandidateStatus(tce_data, toi_data):
+    tic_id = tce_data["ticid"]
+    toi_data = toi_data[toi_data["TIC"] == tic_id]
+    for index, toi in toi_data.iterrows():
+        if matchTCE(tce_data, toi):
+            return True
+
+    return False
