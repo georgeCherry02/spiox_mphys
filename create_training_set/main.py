@@ -1,7 +1,6 @@
 import argparse
 import glob
 
-import api_queries
 import plot_data
 import process_data
 from file_handler import FileHandler
