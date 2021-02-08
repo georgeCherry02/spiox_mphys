@@ -41,7 +41,7 @@ class FileHandler:
         output = f''
         for i in range(0, len(self.expected_keys)):
             output += f'{event_parameters[self.expected_keys[i]]},'
-        output = output[0:len(output)-2]+"\n"
+        output = output[0:len(output)-1]+"\n"
         with open(self.collated_parameter_file, "a") as f:
             f.write(output)
 
