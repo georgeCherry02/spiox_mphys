@@ -351,9 +351,6 @@ class TestModelSmallNoMtm(nn.Module):
 
 def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
 
-    ### WEIGHTING
-    class_weighting = torch.tensor([0.035, 0.965])
-
     ### empty arrays to fill per-epoch outputs
     epoch_train_loss = []
     epoch_val_loss = []
@@ -367,6 +364,8 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
         train_loss = torch.zeros(1)
         for x_train_data, y_train in data_loader:
 
+            toi_amount = y_train.sum().item()
+            batch_weighting = torch.tensor([toi_amount, (args.n_batches - toi_amount)])/args.n_batches
             ### get local view, global view and label for training
             x_train_local, x_train_global, x_train_local_cen, x_train_global_cen, x_train_star = x_train_data
             x_train_local = Variable(x_train_local).type(torch.FloatTensor)
@@ -387,28 +386,30 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
             ### calculate loss using model
             # Filtered out x_train_local_cen, global_cen and x_train_star
             output_train = model(x_train_local, x_train_global)
-            weight_ = class_weighting[y_train.data.view(-1).long()].view_as(y_train)
+            weight_ = batch_weighting[y_train.data.view(-1).long()].view_as(y_train)
+            loss = criterion(output_train, y_train)
             loss = criterion(output_train, y_train)
             loss_class_weighted = loss * weight_
             loss_class_weighted = loss_class_weighted.mean()
             train_loss += loss_class_weighted
-            # train_loss += loss.data
 
             ### train model (zero gradients and back propogate results)
             optimiser.zero_grad()
-            # loss.backward()
             loss_class_weighted.backward()
             optimiser.step()
 
         ### record training loss for this epoch (divided by size of training dataset)
-        epoch_train_loss.append(train_loss.cpu().detach().numpy() / len(data_loader.dataset))
         # epoch_train_loss.append(train_loss.cpu().numpy() / len(data_loader.dataset))
+        epoch_train_loss.append(train_loss.cpu().detach().numpy() / len(data_loader.dataset))
 
         ### for validation set
 
         ### loop over batches
         val_pred, val_gt, val_loss, num_corr = [], [], 0, 0
         for x_val_data, y_val in val_loader:
+
+            toi_amount = y_val.sum().item()
+            batch_weighting = torch.tensor([toi_amount, (args.n_batches - toi_amount)])/args.n_batches
             
             ### get local view, global view, and label for validation
             x_val_local, x_val_global, x_val_local_cen, x_val_global_cen, x_val_star = x_val_data
@@ -429,13 +430,11 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
 
             ### calculate loss & add to sum over all batches
             output_val = model(x_val_local, x_val_global)
-            weight_ = class_weighting[y_val.data.view(-1).long()].view_as(y_val)
-
+            weight_ = batch_weighting[y_val.data.view(-1).long()].view_as(y_val)
             loss_val = criterion(output_val, y_val)
             loss_class_weighted_val = loss_val * weight_
             loss_class_weighted_val = loss_class_weighted_val.mean()
             val_loss += loss_class_weighted_val.data
-            # val_loss += loss_val.data
 
             ### get number of correct predictions using threshold of 0.5
             output_pred = output_val >= 0.5
@@ -447,7 +446,6 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
 
         ### record validation loss calculate for this epoch (divided by size of validation dataset)
         epoch_val_loss.append(val_loss.cpu().detach().numpy() / len(val_loader.dataset))
-        # epoch_val_loss.append(val_loss.cpu().numpy() / len(val_loader.dataset))
 
         ### record validation accuracy (# correct predictions in val set) for this epoch
         epoch_val_acc.append(num_corr / len(val_loader.dataset))
@@ -479,6 +477,9 @@ lr = args.r_learn
 optimiser = torch.optim.Adam(model.parameters(), lr=lr)
 
 ### specify loss function to use for training
+### 0 is not TOI 1 is TOI
+# summed = 13704 + 494
+# weighting = torch.tensor([494, 13704])/summed
 criterion = nn.BCELoss(reduce=False)
 
 ### specify the batch size to use for training

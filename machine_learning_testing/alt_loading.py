@@ -53,13 +53,13 @@ class CustomDataLoader(Dataset):
         self.file_list_local = np.sort(glob.glob(os.path.join(filepath, 'processed_lcs_and_centroids/*-local.npy')))
         self.file_list_global = np.sort(glob.glob(os.path.join(filepath, 'processed_lcs_and_centroids/*-global.npy')))
         self.info_file = os.path.join(filepath, 'collated_scientific_domain_parameters.csv')
+        self.tce_data = pd.read_csv(self.info_file)
 
         ### gather up tce ids
-        self.ids = []
-        for path in self.file_list_local:
-            last_section_parts = (path.split('/')[-1]).split('-')
-            self.ids.append(last_section_parts[0] + "-" + last_section_parts[1])
-        self.ids = np.array(self.ids)
+        self.ids = self.tce_data["tce_id"]
+
+        print("Len ids: "+str(len(self.ids)))
+        print("Len files: "+str(len(self.file_list_local))+"/"+str(len(self.file_list_global)))
 
     def __len__(self):
         return self.ids.shape[0]
@@ -73,7 +73,10 @@ class CustomDataLoader(Dataset):
 
         ### get info file
         data_info = pd.read_csv(self.info_file)
+        print(tce_id)
         tce_data_info = data_info[data_info["tce_id"]==tce_id]
+        print(tce_data_info)
+        temp = tce_data_info["pc"]
         pc_class = tce_data_info["pc"].values[0]
 
         # Remove classification and information columns
@@ -351,9 +354,6 @@ class TestModelSmallNoMtm(nn.Module):
 
 def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
 
-    ### WEIGHTING
-    class_weighting = torch.tensor([0.035, 0.965])
-
     ### empty arrays to fill per-epoch outputs
     epoch_train_loss = []
     epoch_val_loss = []
@@ -387,22 +387,16 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
             ### calculate loss using model
             # Filtered out x_train_local_cen, global_cen and x_train_star
             output_train = model(x_train_local, x_train_global)
-            weight_ = class_weighting[y_train.data.view(-1).long()].view_as(y_train)
             loss = criterion(output_train, y_train)
-            loss_class_weighted = loss * weight_
-            loss_class_weighted = loss_class_weighted.mean()
-            train_loss += loss_class_weighted
-            # train_loss += loss.data
+            train_loss += loss.data
 
             ### train model (zero gradients and back propogate results)
             optimiser.zero_grad()
-            # loss.backward()
-            loss_class_weighted.backward()
+            loss.backward()
             optimiser.step()
 
         ### record training loss for this epoch (divided by size of training dataset)
-        epoch_train_loss.append(train_loss.cpu().detach().numpy() / len(data_loader.dataset))
-        # epoch_train_loss.append(train_loss.cpu().numpy() / len(data_loader.dataset))
+        epoch_train_loss.append(train_loss.cpu().numpy() / len(data_loader.dataset))
 
         ### for validation set
 
@@ -429,13 +423,8 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
 
             ### calculate loss & add to sum over all batches
             output_val = model(x_val_local, x_val_global)
-            weight_ = class_weighting[y_val.data.view(-1).long()].view_as(y_val)
-
             loss_val = criterion(output_val, y_val)
-            loss_class_weighted_val = loss_val * weight_
-            loss_class_weighted_val = loss_class_weighted_val.mean()
-            val_loss += loss_class_weighted_val.data
-            # val_loss += loss_val.data
+            val_loss += loss_val.data
 
             ### get number of correct predictions using threshold of 0.5
             output_pred = output_val >= 0.5
@@ -446,8 +435,7 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
             val_gt.append(y_val.data.cpu().numpy())
 
         ### record validation loss calculate for this epoch (divided by size of validation dataset)
-        epoch_val_loss.append(val_loss.cpu().detach().numpy() / len(val_loader.dataset))
-        # epoch_val_loss.append(val_loss.cpu().numpy() / len(val_loader.dataset))
+        epoch_val_loss.append(val_loss.cpu().numpy() / len(val_loader.dataset))
 
         ### record validation accuracy (# correct predictions in val set) for this epoch
         epoch_val_acc.append(num_corr / len(val_loader.dataset))
