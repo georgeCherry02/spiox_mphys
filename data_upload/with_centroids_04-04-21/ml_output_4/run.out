@@ -1,0 +1,86 @@
+=========================================================
+Job submitted date = Sat Apr 3 13:42:42 BST 2021
+1 nodes ( processes per node )
+1 hosts used: comp02
+Job output begins
+-----------------
+
+Training Model...
+/mnt/zfsusers/georgecherry/ml_venv/lib/python3.6/site-packages/torch/nn/_reduction.py:44: UserWarning: size_average and reduce args will be deprecated, please use reduction='none' instead.
+  warnings.warn(warning.format(ret))
+  0%|          | 0/50 [00:00<?, ?it/s]/mnt/zfsusers/georgecherry/ml_venv/lib/python3.6/site-packages/torch/autograd/__init__.py:132: UserWarning: CUDA initialization: Found no NVIDIA driver on your system. Please check that you have an NVIDIA GPU and installed a driver from http://www.nvidia.com/Download/index.aspx (Triggered internally at  /pytorch/c10/cuda/CUDAFunctions.cpp:100.)
+  allow_unreachable=True)  # allow_unreachable flag
+  2%|▏         | 1/50 [27:31<22:28:37, 1651.38s/it]  4%|▍         | 2/50 [54:05<21:34:09, 1617.70s/it]  6%|▌         | 3/50 [1:20:43<21:00:17, 1608.89s/it]  8%|▊         | 4/50 [1:47:10<20:26:36, 1599.92s/it] 10%|█         | 5/50 [2:12:30<19:38:26, 1571.26s/it] 12%|█▏        | 6/50 [2:38:01<19:02:06, 1557.43s/it] 14%|█▍        | 7/50 [3:03:33<18:30:23, 1549.39s/it] 16%|█▌        | 8/50 [3:28:02<17:46:29, 1523.55s/it] 18%|█▊        | 9/50 [3:52:25<17:08:10, 1504.65s/it] 20%|██        | 10/50 [4:16:39<16:32:39, 1489.00s/it] 22%|██▏       | 11/50 [4:40:57<16:01:42, 1479.56s/it] 24%|██▍       | 12/50 [5:05:10<15:31:58, 1471.54s/it] 26%|██▌       | 13/50 [5:29:22<15:03:43, 1465.50s/it] 28%|██▊       | 14/50 [5:53:43<14:38:37, 1464.37s/it] 30%|███       | 15/50 [6:18:11<14:14:44, 1465.26s/it] 32%|███▏      | 16/50 [6:42:44<13:51:41, 1467.69s/it] 34%|███▍      | 17/50 [7:07:22<13:28:54, 1470.73s/it] 36%|███▌      | 18/50 [7:31:54<13:04:37, 1471.17s/it] 38%|███▊      | 19/50 [7:57:28<12:49:46, 1489.87s/it] 40%|████      | 20/50 [8:22:46<12:29:10, 1498.36s/it] 42%|████▏     | 21/50 [8:48:25<12:10:10, 1510.72s/it] 44%|████▍     | 22/50 [9:13:55<11:47:42, 1516.52s/it] 46%|████▌     | 23/50 [9:39:19<11:23:22, 1518.61s/it] 48%|████▊     | 24/50 [10:04:46<10:59:09, 1521.14s/it] 50%|█████     | 25/50 [10:30:37<10:37:32, 1530.12s/it] 52%|█████▏    | 26/50 [10:57:17<10:20:29, 1551.25s/it] 54%|█████▍    | 27/50 [11:22:37<9:50:57, 1541.63s/it]  56%|█████▌    | 28/50 [11:47:44<9:21:32, 1531.46s/it] 58%|█████▊    | 29/50 [12:12:53<8:53:38, 1524.69s/it] 60%|██████    | 30/50 [12:38:05<8:26:59, 1520.96s/it] 62%|██████▏   | 31/50 [13:03:33<8:02:16, 1522.95s/it] 64%|██████▍   | 32/50 [13:28:59<7:37:07, 1523.73s/it] 66%|██████▌   | 33/50 [13:54:09<7:10:37, 1519.85s/it] 68%|██████▊   | 34/50 [14:19:23<6:44:48, 1518.02s/it] 70%|███████   | 35/50 [14:44:33<6:18:54, 1515.66s/it] 72%|███████▏  | 36/50 [15:09:46<5:53:27, 1514.79s/it] 74%|███████▍  | 37/50 [15:35:00<5:28:07, 1514.44s/it] 76%|███████▌  | 38/50 [16:00:09<5:02:34, 1512.88s/it] 78%|███████▊  | 39/50 [16:25:17<4:37:07, 1511.58s/it] 80%|████████  | 40/50 [16:50:23<4:11:37, 1509.76s/it] 82%|████████▏ | 41/50 [17:15:31<3:46:22, 1509.21s/it] 84%|████████▍ | 42/50 [17:40:37<3:21:05, 1508.17s/it] 86%|████████▌ | 43/50 [18:05:42<2:55:51, 1507.30s/it] 88%|████████▊ | 44/50 [18:30:50<2:30:45, 1507.56s/it] 90%|█████████ | 45/50 [18:55:58<2:05:39, 1507.81s/it] 92%|█████████▏| 46/50 [19:21:07<1:40:32, 1508.10s/it] 94%|█████████▍| 47/50 [19:46:14<1:15:23, 1507.69s/it] 96%|█████████▌| 48/50 [20:11:20<50:14, 1507.26s/it]   98%|█████████▊| 49/50 [20:36:31<25:08, 1508.45s/it]100%|██████████| 50/50 [21:01:37<00:00, 1507.72s/it]100%|██████████| 50/50 [21:01:38<00:00, 1513.96s/it]
+CALCULATING METRICS...
+
+GT VAL FIN: 
+[0. 0. 0. ... 0. 0. 0.]
+PRED VAL FIN: 
+[0.13582532 0.01548228 0.08180762 ... 0.02405185 0.00822912 0.03410244]
+LOSS TRAIN:
+[array([0.00025371], dtype=float32), array([0.00025382], dtype=float32), array([0.00025326], dtype=float32), array([0.00025149], dtype=float32), array([0.00024943], dtype=float32), array([0.00024154], dtype=float32), array([0.00022715], dtype=float32), array([0.00020384], dtype=float32), array([0.0001855], dtype=float32), array([0.00017766], dtype=float32), array([0.00017224], dtype=float32), array([0.00017055], dtype=float32), array([0.00016691], dtype=float32), array([0.00016553], dtype=float32), array([0.00016155], dtype=float32), array([0.00015846], dtype=float32), array([0.00015326], dtype=float32), array([0.00014916], dtype=float32), array([0.00014453], dtype=float32), array([0.00014226], dtype=float32), array([0.00014294], dtype=float32), array([0.00013754], dtype=float32), array([0.00013613], dtype=float32), array([0.00013672], dtype=float32), array([0.0001358], dtype=float32), array([0.00013191], dtype=float32), array([0.0001323], dtype=float32), array([0.00013333], dtype=float32), array([0.00012913], dtype=float32), array([0.00012763], dtype=float32), array([0.00012911], dtype=float32), array([0.00012668], dtype=float32), array([0.00012665], dtype=float32), array([0.00012525], dtype=float32), array([0.00012688], dtype=float32), array([0.00012612], dtype=float32), array([0.00012456], dtype=float32), array([0.00012255], dtype=float32), array([0.0001225], dtype=float32), array([0.00012244], dtype=float32), array([0.0001233], dtype=float32), array([0.00012124], dtype=float32), array([0.00012192], dtype=float32), array([0.00011988], dtype=float32), array([0.00012129], dtype=float32), array([0.00012045], dtype=float32), array([0.00011896], dtype=float32), array([0.00012049], dtype=float32), array([0.00011869], dtype=float32), array([0.00011881], dtype=float32)]
+LOSS VAL:
+[0.00025220811660902015, 0.000252021149961625, 0.0002514941203021587, 0.0002498964572191272, 0.00024535241538763955, 0.00023583174255603233, 0.00021379748638758678, 0.0001918999371956496, 0.00018020051686692227, 0.00017434581096180057, 0.00016954017703105638, 0.00016764978872821237, 0.00016710346459435617, 0.00016280324849667288, 0.0001595474192921184, 0.0001550197836412042, 0.00015110307250967964, 0.00014518776281163094, 0.00014708369260842507, 0.00014821390548815674, 0.00013700186794854367, 0.00013840743430417463, 0.0001425820516018586, 0.0001364350990604928, 0.00013194010784666645, 0.00013283150752575772, 0.00013456437466496867, 0.00012782146803408143, 0.00012718527094379817, 0.00012808625069046073, 0.00013213746899331955, 0.00012459543695381316, 0.00012831440910955166, 0.00012793846072605217, 0.0001255001110297758, 0.00012359014278164144, 0.00012178587433250375, 0.0001280795505205029, 0.0001212882481757848, 0.00012094028433673331, 0.00012272316765694539, 0.00012566257755694917, 0.00012372189599840652, 0.00011965554773782336, 0.00012627453480930224, 0.00012501781633965213, 0.00012778680850828445, 0.00012179394308354322, 0.00012689543401780206, 0.00012688439301091663]
+   average precision = 0.4295
+
+   thresh = 0.05, precision = 0.09, recall = 0.99
+      TN = 6180, FP = 7321, FN = 6, TP = 691
+   thresh = 0.06, precision = 0.09, recall = 0.99
+      TN = 6589, FP = 6912, FN = 7, TP = 690
+   thresh = 0.07, precision = 0.10, recall = 0.99
+      TN = 6962, FP = 6539, FN = 8, TP = 689
+   thresh = 0.08, precision = 0.10, recall = 0.99
+      TN = 7274, FP = 6227, FN = 10, TP = 687
+   thresh = 0.09, precision = 0.10, recall = 0.99
+      TN = 7505, FP = 5996, FN = 10, TP = 687
+   thresh = 0.10, precision = 0.11, recall = 0.99
+      TN = 7658, FP = 5843, FN = 10, TP = 687
+   thresh = 0.12, precision = 0.11, recall = 0.99
+      TN = 7912, FP = 5589, FN = 10, TP = 687
+   thresh = 0.15, precision = 0.11, recall = 0.99
+      TN = 8138, FP = 5363, FN = 10, TP = 687
+   thresh = 0.20, precision = 0.12, recall = 0.98
+      TN = 8511, FP = 4990, FN = 11, TP = 686
+   thresh = 0.30, precision = 0.14, recall = 0.98
+      TN = 9124, FP = 4377, FN = 13, TP = 684
+   thresh = 0.40, precision = 0.15, recall = 0.98
+      TN = 9632, FP = 3869, FN = 15, TP = 682
+   thresh = 0.50, precision = 0.16, recall = 0.97
+      TN = 10091, FP = 3410, FN = 24, TP = 673
+   thresh = 0.60, precision = 0.18, recall = 0.95
+      TN = 10549, FP = 2952, FN = 34, TP = 663
+   thresh = 0.70, precision = 0.21, recall = 0.91
+      TN = 11043, FP = 2458, FN = 61, TP = 636
+   thresh = 0.80, precision = 0.24, recall = 0.85
+      TN = 11658, FP = 1843, FN = 107, TP = 590
+   thresh = 0.90, precision = 0.35, recall = 0.67
+      TN = 12633, FP = 868, FN = 230, TP = 467
+   thresh = 0.91, precision = 0.38, recall = 0.64
+      TN = 12760, FP = 741, FN = 250, TP = 447
+   thresh = 0.92, precision = 0.39, recall = 0.59
+      TN = 12872, FP = 629, FN = 289, TP = 408
+   thresh = 0.93, precision = 0.45, recall = 0.51
+      TN = 13057, FP = 444, FN = 339, TP = 358
+   thresh = 0.94, precision = 0.50, recall = 0.35
+      TN = 13257, FP = 244, FN = 454, TP = 243
+   thresh = 0.95, precision = 0.57, recall = 0.16
+      TN = 13417, FP = 84, FN = 585, TP = 112
+   thresh = 0.97, precision = 0.00, recall = 0.00
+      TN = 13501, FP = 0, FN = 697, TP = 0
+   thresh = 1.00, precision = 0.00, recall = 0.00
+      TN = 13501, FP = 0, FN = 697, TP = 0
+
+OUTPUTTING MODEL + RESULTS @ ml_output_4/test_model.pth
+
+Finished
+
+/mnt/zfsusers/georgecherry/ml_venv/lib/python3.6/site-packages/sklearn/metrics/_classification.py:1245: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+/mnt/zfsusers/georgecherry/ml_venv/lib/python3.6/site-packages/sklearn/metrics/_classification.py:1245: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+---------------
+Job output ends
+=========================================================
+PBS job: finished date = Sun Apr 4 10:49:17 BST 2021
+Total run time : 21 Hours 2 Minutes 6 Seconds
+=========================================================
