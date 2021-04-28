@@ -13,7 +13,10 @@ def normaliseSeries(series):
 ### Old data extraction
 def normaliseAndQualityCorrectData(dv_data, centroid_data, epoch):
     time = dv_data["TIME"]
-    lc_detrend = dv_data["LC_DETREND"]
+    if ("LC_DETREND" in dv_data.keys()):
+        lc_detrend = dv_data["LC_DETREND"]
+    else:
+        lc_detrend = dv_data["LC_INIT"]
     # Clean data from dv file
     lc_nans = np.isnan(lc_detrend)
     lc_detrend = lc_detrend[np.logical_not(lc_nans)]
@@ -156,11 +159,16 @@ def binAllTimeSeries(period, duration, phase_folded_time, lc_detrend, lc_pdc, de
     begin_time = period/2 - local_observation_width * duration
     end_time = period/2 + local_observation_width * duration
     # Begin looping through all data
+    pdc_viable = len(lc_detrend) < len(lc_pdc)
     for i in range(0, len(phase_folded_time)):
         c_time = phase_folded_time[i]
         lc_det_val = lc_detrend[i]
-        lc_pdc_val = lc_pdc[i]
-        cent_val = delta_r[i]
+        if (pdc_viable):
+            lc_pdc_val = lc_pdc[i]
+            cent_val = delta_r[i]
+        else:
+            lc_pdc_val = False
+            cent_val = 0 
         # Determine which global bin this entry falls into
         global_ind = math.floor(c_time/global_delta)
         series_bins = updateBins(series_bins, "global", global_ind, lc_det_val, lc_pdc_val, cent_val)
@@ -199,7 +207,10 @@ def binAllTimeSeries(period, duration, phase_folded_time, lc_detrend, lc_pdc, de
         if (np.isnan(lc_detrend_median)):
             global_nan_count += 1
         series_output["global"]["lc_det"].append(lc_detrend_median)
-        series_output["global"]["lc_pdc"].append(np.median(series_bins["global"]["lc_pdc"][i]))
+        if (pdc_viable):
+            series_output["global"]["lc_pdc"].append(np.median(series_bins["global"]["lc_pdc"][i]))
+        else:
+            series_output["global"]["lc_pdc"].append(0)
         series_output["global"]["cent"].append(np.median(series_bins["global"]["cent"][i]))
     local_nan_count = 0
     for i in range(0, len(series_bins["local"]["lc_det"])):
@@ -207,7 +218,10 @@ def binAllTimeSeries(period, duration, phase_folded_time, lc_detrend, lc_pdc, de
         if (np.isnan(lc_detrend_median)):
             local_nan_count += 1
         series_output["local"]["lc_det"].append(np.median(series_bins["local"]["lc_det"][i]))
-        series_output["local"]["lc_pdc"].append(np.median(series_bins["local"]["lc_pdc"][i]))
+        if (pdc_viable):
+            series_output["local"]["lc_pdc"].append(np.median(series_bins["local"]["lc_pdc"][i]))
+        else:
+            series_output["local"]["lc_pdc"].append(0)
         series_output["local"]["cent"].append(np.median(series_bins["local"]["cent"][i]))
     result = {
         "cent": {
@@ -217,7 +231,7 @@ def binAllTimeSeries(period, duration, phase_folded_time, lc_detrend, lc_pdc, de
         "lc": {}
     }
 
-    if (local_nan_count > n_local_bins/2 or global_nan_count > n_global_bins/2):
+    if ((local_nan_count > n_local_bins/2 or global_nan_count > n_global_bins/2) and pdc_viable):
         result["lc"]["global"] = series_output["global"]["lc_pdc"]
         result["lc"]["local"] = series_output["local"]["lc_pdc"]
     else:
@@ -230,7 +244,13 @@ def prepareBinnedTimeSeries(period, duration, epoch, lc_data, dv_data):
     # First extract series from DV file
     # Time is identical for each file
     time = dv_data["TIME"]
-    lc_detrend = dv_data["LC_DETREND"]
+    if ("LC_DETREND" in dv_data.columns.names):
+        lc_detrend = dv_data["LC_DETREND"]
+    elif ("LC_INIT" in dv_data.columns.names):
+        lc_detrend = dv_data["LC_INIT"]
+    else:
+        # At least one DV file seems to have the structure of an original fits file?
+        lc_detrend = dv_data["PDCSAP_FLUX"]
     dv_nans = np.isnan(lc_detrend)
     lc_detrend = lc_detrend[np.logical_not(dv_nans)]
     time = time[np.logical_not(dv_nans)]
@@ -349,6 +369,26 @@ def linearlyInterpolateBinNans(binned_series):
     binned_series["cent"]["global"] = interpolateSeries(binned_series["cent"]["global"])
     return binned_series
 
+def normaliseSeriesForML(series):
+    series_usable = True
+    max_val = max(series)
+    min_val = min(series)
+    delta = max_val - min_val
+    series -= min_val
+    series /= delta
+    fin_max_val = max(series)
+    fin_min_val = min(series)
+    if (fin_max_val != 1 or fin_min_val != 0):
+        series_usable = False
+    return [series, series_usable]
+
+def finalNormalisation(binned_series):
+    [binned_series["lc"]["local"], lc_local_valid] = normaliseSeriesForML(binned_series["lc"]["local"])
+    [binned_series["lc"]["global"], lc_global_valid] = normaliseSeriesForML(binned_series["lc"]["global"])
+    tce_usable = lc_local_valid and lc_global_valid
+    return [binned_series, tce_usable]
+
+
 def calculateExpectedDuration(planet_to_star_radius_ratio, orbital_period, stellar_density):
     scaled_stellar_density = stellar_density * 1408
     scaled_orbital_period = orbital_period * 24 * 60 * 60
@@ -429,7 +469,7 @@ def matchTCE(tce_data, toi_data):
             factor_count += 1
 
     # From testing it was determined if 3 or more factors were matched it was going to be the same event
-    return factor_count >= 3
+    return factor_count >= 2
 
 # Need to check all possible TOIs and there may be multiple per TIC
 def determineCandidateStatus(tce_data, toi_data):
