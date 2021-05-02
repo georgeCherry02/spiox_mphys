@@ -33,8 +33,8 @@ class FileHandler:
     def collateKeysToCSVHeader(self):
         output = ""
         for i in range(0, len(self.expected_keys)):
-            output += self.expected_keys[i]+", "
-        output = output[0:len(output)-2]+"\n"
+            output += self.expected_keys[i]+","
+        output = output[0:len(output)-1]+"\n"
         return output
 
     def appendParameters(self, event_parameters):
@@ -65,11 +65,23 @@ class FileHandler:
         main_file_pattern = "*"+str(tic_id)+"*"
         dv_file_pattern = self.dv_input_dir+dv_dir_pattern+main_file_pattern+"_dvt.fits"
         lc_file_pattern = self.lc_input_dir+main_file_pattern+"_lc.fit"
+        if (int(sector) == 15):
+            # Why is this the case??
+            lc_file_pattern += "s"
 
         dv_file_paths = glob.glob(dv_file_pattern)
         lc_file_paths = glob.glob(lc_file_pattern)
         if ((len(dv_file_paths) != 1) or (len(lc_file_paths) != 1)):
-            return [False, False]
+            if (len(dv_file_paths) < 1):
+                print("DV < 1")
+                return [False, False]
+            if (len(dv_file_paths) > 1):
+                print("DV > 1")
+            if (len(lc_file_paths) < 1):
+                print("LC < 1")
+                return [False, False]
+            if (len(lc_file_paths) > 1):
+                print("LC > 1")
         dv_hdul = fits.open(dv_file_paths[0])
         lc_hdul = fits.open(lc_file_paths[0])
         return [dv_hdul, lc_hdul]

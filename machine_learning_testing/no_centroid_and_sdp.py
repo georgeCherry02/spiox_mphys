@@ -83,24 +83,24 @@ class CustomDataLoader(Dataset):
         del tce_data_info["tce_id"]
 
         # Remove calculated values
-        del tce_data_info["ratio_of_mes_to_expected_mes"]
-        del tce_data_info["log_ratio_of_planet_to_earth_radius"]
-        del tce_data_info["log_duration_over_expected_duration"]
+        # del tce_data_info["ratio_of_mes_to_expected_mes"]
+        # del tce_data_info["log_ratio_of_planet_to_earth_radius"]
+        # del tce_data_info["log_duration_over_expected_duration"]
 
         # Remove TCE data
-        del tce_data_info["semi_major_scaled_to_stellar_radius"]
-        del tce_data_info["number_of_transits"]
-        del tce_data_info["ingress_duration"]
-        del tce_data_info["impact_parameter"]
-        del tce_data_info["ratio_of_planet_to_star_radius"]
+        # del tce_data_info["semi_major_scaled_to_stellar_radius"]
+        # del tce_data_info["number_of_transits"]
+        # del tce_data_info["ingress_duration"]
+        # del tce_data_info["impact_parameter"]
+        # del tce_data_info["ratio_of_planet_to_star_radius"]
 
         # Remove Header data
-        del tce_data_info["band_magnitude"]
-        del tce_data_info["stellar_radius"]
-        del tce_data_info["total_proper_motion"]
-        del tce_data_info["stellar_log_g"]
-        del tce_data_info["stellar_melaticity"]
-        del tce_data_info["effective_temperature"]
+        # del tce_data_info["band_magnitude"]
+        # del tce_data_info["stellar_radius"]
+        # del tce_data_info["total_proper_motion"]
+        # del tce_data_info["stellar_log_g"]
+        # del tce_data_info["stellar_melaticity"]
+        # del tce_data_info["effective_temperature"]
 
         np_tce_data = tce_data_info.to_numpy()
         np_tce_data.astype(np.float)
@@ -115,7 +115,7 @@ class TestModel(nn.Module):
 
         ### define global convolutional layer
         self.fc_global = nn.Sequential(
-            nn.Conv1d(2, 16, 5, stride=1, padding=2),
+            nn.Conv1d(1, 16, 5, stride=1, padding=2),
             nn.ReLU(),
             nn.Conv1d(16, 16, 5, stride=1, padding=2),
             nn.ReLU(),
@@ -144,7 +144,7 @@ class TestModel(nn.Module):
         
         ### define local convolutional layer
         self.fc_local = nn.Sequential(
-            nn.Conv1d(2, 16, 5, stride=1, padding=2),
+            nn.Conv1d(1, 16, 5, stride=1, padding=2),
             nn.ReLU(),
             nn.Conv1d(16, 16, 5, stride=1, padding=2),
             nn.ReLU(),
@@ -158,7 +158,7 @@ class TestModel(nn.Module):
 
         ### define fully connected layer that combines both views
         self.final_layer = nn.Sequential(
-            nn.Linear(16576, 512),
+            nn.Linear(16592, 512),
             nn.ReLU(),
             nn.Linear(512, 512),
             nn.ReLU(),
@@ -169,22 +169,18 @@ class TestModel(nn.Module):
             nn.Sigmoid()
         )
 
-    def forward(self, x_local, x_global, x_local_cen, x_global_cen):
-            
-        ### concatonate light curve and centroid data
-        x_local_all = torch.cat([x_local, x_local_cen], dim=1)
-        x_global_all = torch.cat([x_global, x_global_cen], dim=1)
+    def forward(self, x_local, x_global, x_star_param):
 
         ### get outputs of global and local convolutional layers
-        out_global = self.fc_global(x_global_all)
-        out_local = self.fc_local(x_local_all)
+        out_global = self.fc_global(x_global)
+        out_local = self.fc_local(x_local)
 
         ### flattening outputs from convolutional layers into vector
         out_global = out_global.view(out_global.shape[0], -1)
         out_local = out_local.view(out_local.shape[0], -1)
 
         ### concatonate global and local views with stellar parameters
-        out = torch.cat([out_global, out_local], dim=1)
+        out = torch.cat([out_global, out_local, x_star_param.squeeze(1)], dim=1)
         out = self.final_layer(out)
 
         return out
@@ -386,7 +382,7 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
 
             ### calculate loss using model
             # Filtered out x_train_local_cen, global_cen and x_train_star
-            output_train = model(x_train_local, x_train_global, x_train_local_cen, x_train_global_cen)
+            output_train = model(x_train_local, x_train_global, x_train_star)
             weight_ = batch_weighting[y_train.data.view(-1).long()].view_as(y_train)
             loss = criterion(output_train, y_train)
             loss_class_weighted = loss * weight_
@@ -429,7 +425,7 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
             y_val = y_val.unsqueeze(1)
 
             ### calculate loss & add to sum over all batches
-            output_val = model(x_val_local, x_val_global, x_val_local_cen, x_val_global_cen)
+            output_val = model(x_val_local, x_val_global, x_val_star)
             weight_ = batch_weighting[y_val.data.view(-1).long()].view_as(y_val)
             loss_val = criterion(output_val, y_val)
             loss_class_weighted_val = loss_val * weight_

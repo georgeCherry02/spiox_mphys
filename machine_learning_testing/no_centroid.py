@@ -63,6 +63,7 @@ class CustomDataLoader(Dataset):
             self.ids.append(last_section_parts[0] + "-" + last_section_parts[1])
         self.ids = np.array(self.ids)
 
+
     def __len__(self):
         return self.ids.shape[0]
 
@@ -115,7 +116,7 @@ class TestModel(nn.Module):
 
         ### define global convolutional layer
         self.fc_global = nn.Sequential(
-            nn.Conv1d(2, 16, 5, stride=1, padding=2),
+            nn.Conv1d(1, 16, 5, stride=1, padding=2),
             nn.ReLU(),
             nn.Conv1d(16, 16, 5, stride=1, padding=2),
             nn.ReLU(),
@@ -144,7 +145,7 @@ class TestModel(nn.Module):
         
         ### define local convolutional layer
         self.fc_local = nn.Sequential(
-            nn.Conv1d(2, 16, 5, stride=1, padding=2),
+            nn.Conv1d(1, 16, 5, stride=1, padding=2),
             nn.ReLU(),
             nn.Conv1d(16, 16, 5, stride=1, padding=2),
             nn.ReLU(),
@@ -169,15 +170,11 @@ class TestModel(nn.Module):
             nn.Sigmoid()
         )
 
-    def forward(self, x_local, x_global, x_local_cen, x_global_cen):
-            
-        ### concatonate light curve and centroid data
-        x_local_all = torch.cat([x_local, x_local_cen], dim=1)
-        x_global_all = torch.cat([x_global, x_global_cen], dim=1)
+    def forward(self, x_local, x_global):
 
         ### get outputs of global and local convolutional layers
-        out_global = self.fc_global(x_global_all)
-        out_local = self.fc_local(x_local_all)
+        out_global = self.fc_global(x_global)
+        out_local = self.fc_local(x_local)
 
         ### flattening outputs from convolutional layers into vector
         out_global = out_global.view(out_global.shape[0], -1)
@@ -386,7 +383,7 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
 
             ### calculate loss using model
             # Filtered out x_train_local_cen, global_cen and x_train_star
-            output_train = model(x_train_local, x_train_global, x_train_local_cen, x_train_global_cen)
+            output_train = model(x_train_local, x_train_global)
             weight_ = batch_weighting[y_train.data.view(-1).long()].view_as(y_train)
             loss = criterion(output_train, y_train)
             loss_class_weighted = loss * weight_
@@ -429,7 +426,7 @@ def train_model(n_epochs, data_loader, val_loader, model, criterion, optimiser):
             y_val = y_val.unsqueeze(1)
 
             ### calculate loss & add to sum over all batches
-            output_val = model(x_val_local, x_val_global, x_val_local_cen, x_val_global_cen)
+            output_val = model(x_val_local, x_val_global)
             weight_ = batch_weighting[y_val.data.view(-1).long()].view_as(y_val)
             loss_val = criterion(output_val, y_val)
             loss_class_weighted_val = loss_val * weight_

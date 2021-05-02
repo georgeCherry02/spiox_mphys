@@ -45,8 +45,14 @@ odd_tics = {
     '9': [140055734, 179304342, 35975843, 38603673, 386072709, 388684102, 342829812],
     '10': [307027599, 307440881, 377174003, 432829812, 464402195],
     '11': [179304342, 241683370, 241728550, 253097689, 300104749, 314899629, 316295827, 398363472, 399977856, 415937547, 419944060, 441103771, 471015273],
-    '12': [141606986, 141809359, 141865875, 149248196, 150100106, 150101472, 150166721, 167123841, 167570131, 167692429, 167719897, 177258700, 177309964, 179040607, 179304342, 231093356, 25078924, 260128333, 260160482, 261089147, 261105201, 271900514, 272431317, 278683844, 279089927, 29777922, 300161053, 302037442, 306576384, 307085577, 307091504, 307291318, 308452910, 31529171, 323172801, 323354786, 33891469, 338465029, 338981469, 349832824, 356900912, 357105141, 357105301, 359892714, 382256692, 38707340, 395118038, 405040121, 415937547, 448912100, 452500843, 453766186, 55652785, 55652896]
+    '12': [],
+    '13': [],
+    '14': [64799884, 68369092, 86319584],
+    '15': []
 }
+
+tces_that_failed_to_normalise = []
+
 for index, tce in tce_data.iterrows():
     tic_id = tce["ticid"]
     tce_id = tce["tceid"]
@@ -64,7 +70,11 @@ for index, tce in tce_data.iterrows():
         fh.appendSkippedTCE(tce_id)
         continue
     raw_lc_data = lc_hdul[1].data
-    dv_data = dv_hdul[int(tce["planetNumber"])].data
+    tce_number = int(tce["planetNumber"])
+    if (tce_number >= len(dv_hdul)):
+        print("Odd trigger!")
+        tce_number = 1
+    dv_data = dv_hdul[tce_number].data
     dv_headers = dv_hdul[0].header
     # Gather key variables for data processing
     epoch = float(tce["transitEpochBtjd"])
@@ -76,6 +86,13 @@ for index, tce in tce_data.iterrows():
     [binned_series, phase_folded_time] = process_data.prepareBinnedTimeSeries(period, duration, epoch, raw_lc_data, dv_data)
     binned_series = process_data.normaliseBinnedTimeSeries(duration, period, detected_depth, binned_series)
     binned_series = process_data.correctBinnedNans(duration, period, binned_series)
+    [normalised_series, valid_normalisation] = process_data.finalNormalisation(binned_series)
+    if (not valid_normalisation):
+        print("Failed to do final normalisation")
+        tces_that_failed_to_normalise.append(tce_id)
+        count += 1
+        progressBar(count, tce_amount)
+        continue
 
     # Plot the data
     ### Comment out to avoid plotting
